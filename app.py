@@ -1,0 +1,612 @@
+import streamlit as st
+import anthropic
+
+# ─── CONFIG PAGE ─────────────────────────────────────────────────────────────
+st.set_page_config(
+    page_title="Simulateur Vélis × Personas",
+    page_icon="🚲",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# ─── CSS CUSTOM ──────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+    .block-container { padding-top: 1rem; padding-bottom: 1rem; }
+    .stSidebar { background-color: #0f172a; }
+    .persona-header { background: #f8fafc; border-radius: 10px; padding: 14px 18px; border: 1px solid #e2e8f0; margin-bottom: 12px; }
+    .vehicle-card { background: white; border-radius: 10px; padding: 14px 18px; border: 1px solid #e2e8f0; margin-bottom: 8px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .tag-ok  { background: #dcfce7; color: #15803d; padding: 2px 7px; border-radius: 4px; font-size: 11px; display: inline-block; margin: 2px; }
+    .tag-ko  { background: #fee2e2; color: #b91c1c; padding: 2px 7px; border-radius: 4px; font-size: 11px; display: inline-block; margin: 2px; }
+    .tag-neu { background: #f1f5f9; color: #475569; padding: 2px 7px; border-radius: 4px; font-size: 11px; display: inline-block; margin: 2px; }
+    .reaction-box { background: #f8fafc; border-left: 3px solid #a5b4fc; border-radius: 6px; padding: 10px 14px; margin-top: 8px; font-size: 13px; color: #334155; }
+    .score-label { font-size: 11px; color: #94a3b8; margin-bottom: 2px; }
+    div[data-testid="stSidebarContent"] { background-color: #0f172a; }
+    div[data-testid="stSidebarContent"] * { color: #e2e8f0 !important; }
+    div[data-testid="stSidebarContent"] .stRadio label { color: #cbd5e1 !important; font-size: 13px !important; }
+    div[data-testid="stSidebarContent"] h1,
+    div[data-testid="stSidebarContent"] h2,
+    div[data-testid="stSidebarContent"] h3,
+    div[data-testid="stSidebarContent"] p,
+    div[data-testid="stSidebarContent"] strong { color: #f1f5f9 !important; }
+    div[data-testid="stSidebarContent"] hr { border-color: #334155 !important; }
+</style>
+""", unsafe_allow_html=True)
+
+# ─── DONNÉES PERSONAS (enrichies — source NVIDIA Nemotron-Personas-France) ────
+PERSONAS = [
+    {"id":1,  "avatar":"👷‍♀️", "prenom":"Epse Janiak",        "age":39, "commune":"Bruay-la-Buissière", "dep":"62",  "urbanite":"periurbain", "budget":9000,
+     "profil":"Ouvrière maintenance",        "resume":"Bassin minier, 2 enfants, budget serré.",
+     "culture":"Patrimoine minier du Nord, art flamand, musées locaux",
+     "sport":"Marche nordique, poterie sportive, randonnée famille",
+     "travel":"Vacances en famille en Bretagne, tourisme régional Nord",
+     "skills":"Maintenance industrielle, électricité basse tension, diagnostic pannes",
+     "hobbies":"Poterie, jardinage, bénévolat association scolaire",
+     "besoins":["trajets domicile travail","Faire ses courses","Transport scolaire et périscolaire avec plusieurs enfants"]},
+
+    {"id":2,  "avatar":"👩‍💼", "prenom":"Nathalie Guillanton", "age":57, "commune":"Donges",             "dep":"44",  "urbanite":"periurbain", "budget":11000,
+     "profil":"Assistante administrative",    "resume":"PME logistique, balades, sensible CO₂.",
+     "culture":"Musées des Pays de la Loire, expositions contemporaines, livres d'histoire",
+     "sport":"Marche nordique, natation, balades nature",
+     "travel":"Voyages culturels en Europe, tourisme de patrimoine, Loire à vélo",
+     "skills":"Bureautique avancée, gestion documentaire, organisation",
+     "hobbies":"Aquarelle, lecture, jardinage, sorties culturelles",
+     "besoins":["trajets domicile travail","Faire ses courses","Tourisme Découverte d'un territoire"]},
+
+    {"id":3,  "avatar":"🔧",  "prenom":"Olivier Carpentier",  "age":43, "commune":"Coise (Rhône)",      "dep":"69",  "urbanite":"rural",      "budget":10000,
+     "profil":"Ouvrier métallurgie",          "resume":"Village Beaujolais, routes campagne, pêcheur.",
+     "culture":"Patrimoine Beaujolais, fêtes du vin, culture ouvrière",
+     "sport":"Pêche en rivière, VTT sur chemins ruraux, randonnée",
+     "travel":"Camping Ardèche, circuits Bourgogne, tourisme local",
+     "skills":"Soudure MIG/TIG, mécanique auto et moto, bricolage polyvalent, électricité",
+     "hobbies":"Réparation d'objets, jardinage potager, mécanique vélo, pêche",
+     "besoins":["trajets domicile travail","Faire ses courses","se rendre sur les sites d'activités sportives"]},
+
+    {"id":4,  "avatar":"🛒",  "prenom":"Pauline Poree",       "age":27, "commune":"Saint-Égrève",       "dep":"38",  "urbanite":"periurbain", "budget":8000,
+     "profil":"Employée commerce",            "resume":"Banlieue grenobloise, randonneuse, budget limité.",
+     "culture":"Scène culturelle grenobloise, cinéma indépendant, street art",
+     "sport":"Randonnée en Chartreuse, yoga, escalade en salle",
+     "travel":"Week-ends découverte Alpes, Vercors, camping sauvage",
+     "skills":"Vente, relation client, informatique bureautique",
+     "hobbies":"Cuisine végétarienne, jeux de société, photographie nature",
+     "besoins":["trajets domicile travail","Faire ses courses","se rendre sur les sites d'activités sportives"]},
+
+    {"id":5,  "avatar":"🧑",  "prenom":"Ludovic Renard",      "age":26, "commune":"Corbère (66)",       "dep":"66",  "urbanite":"rural",      "budget":8000,
+     "profil":"Employé supermarché",          "resume":"Village catalan, pétanque, tourisme montagne.",
+     "culture":"Culture catalane, sardane, festivals Pyrénées-Orientales",
+     "sport":"Randonnée dans les Albères, pétanque, VTT occasionnel",
+     "travel":"Tourisme local catalan, Espagne voisine, mer Méditerranée",
+     "skills":"Commerce polyvalent, encaissement, logistique rayon",
+     "hobbies":"BD franco-belge, pétanque, cuisine catalane",
+     "besoins":["trajets domicile travail","Faire ses courses","Tourisme Découverte d'un territoire","se rendre sur les sites d'activités sportives"]},
+
+    {"id":6,  "avatar":"👴",  "prenom":"Daniel Turpin",       "age":70, "commune":"Quincieux (Rhône)",  "dep":"69",  "urbanite":"periurbain", "budget":9000,
+     "profil":"Retraité actif",               "resume":"Plus de navettes, cherche plaisir et praticité.",
+     "culture":"Patrimoine lyonnais, musées Gallo-romains, brocantes",
+     "sport":"Pêche en Saône, marche, vélo de loisir sur voies vertes",
+     "travel":"Tourisme Bourgogne, Provence, voyages fluviaux",
+     "skills":"Bricolage tous corps d'état, jardinage maraîcher, repair café bénévole",
+     "hobbies":"Jardinage potager, repair café, pêche, brocantes",
+     "besoins":["Faire ses courses","Tourisme Découverte d'un territoire","se rendre sur les sites d'activités sportives"]},
+
+    {"id":7,  "avatar":"📦",  "prenom":"Hanaé Hamzaoui",      "age":56, "commune":"Argenteuil",         "dep":"95",  "urbanite":"urbain",     "budget":13000,
+     "profil":"Technicienne logistique",      "resume":"Zone urbaine dense, trajets courts, confort.",
+     "culture":"Culture franco-algérienne, musiques du Maghreb, cinéma arabe",
+     "sport":"Marche active, fitness en salle, natation",
+     "travel":"Voyages en Algérie famille, tourisme culturel Europe",
+     "skills":"Gestion de flux logistiques, ERP, organisation entrepôt",
+     "hobbies":"Cuisine maghrébine, décoration intérieure, couture",
+     "besoins":["trajets domicile travail","Faire ses courses","Tourisme Découverte d'un territoire"]},
+
+    {"id":8,  "avatar":"⚓",  "prenom":"Romain Botherel",     "age":33, "commune":"Mons-en-Barœul",     "dep":"59",  "urbanite":"urbain",     "budget":3500,
+     "profil":"Manutentionnaire intérimaire", "resume":"Budget RSA très serré, banlieue Lille.",
+     "culture":"Culture ouvrière du Nord, supporter LOSC, musique électro",
+     "sport":"Football en loisir, promenades bord de Deûle, vélo urbain",
+     "travel":"Peu de voyages, sorties locales Lille métropole",
+     "skills":"Manutention, conduite chariot, force physique",
+     "hobbies":"Football, jeux vidéo, promenades vélo bords de Deûle",
+     "besoins":["Faire ses courses","se rendre sur les sites d'activités sportives"]},
+
+    {"id":9,  "avatar":"📋",  "prenom":"Corinne Monneret",    "age":59, "commune":"Orly",               "dep":"94",  "urbanite":"urbain",     "budget":11000,
+     "profil":"Assistante de gestion",        "resume":"Banlieue parisienne, seule, praticité avant tout.",
+     "culture":"Culture francilienne, musées Paris, patrimoine Val-de-Marne",
+     "sport":"Salsa en club, marche urbaine, natation",
+     "travel":"Vacances Martinique, balades IDF, week-ends Normandie",
+     "skills":"Comptabilité, bureautique Office, gestion fournisseurs",
+     "hobbies":"Salsa, karaoké, balades, cuisine créole",
+     "besoins":["trajets domicile travail","Faire ses courses"]},
+
+    {"id":10, "avatar":"⚙️",  "prenom":"Mehmet Kancel",       "age":31, "commune":"Chambéry",           "dep":"73",  "urbanite":"periurbain", "budget":12000,
+     "profil":"Technicien maintenance",       "resume":"Alpes, enfants, technique apprécié, sportif.",
+     "culture":"Culture franco-turque, musiques d'Anatolie, fêtes alpines",
+     "sport":"Randonnée alpine, ski de fond, vélo de montagne VTT",
+     "travel":"Turquie en famille, tourisme alpin Savoie, Italie du Nord",
+     "skills":"Maintenance industrielle, électronique, hydraulique, mécanique moto",
+     "hobbies":"Mécanique moto et vélo, bricolage électronique, ski",
+     "besoins":["trajets domicile travail","Faire ses courses","se rendre sur les sites d'activités sportives","Transport scolaire et périscolaire avec plusieurs enfants"]},
+
+    {"id":11, "avatar":"🥛",  "prenom":"Audrey Poitiers",     "age":44, "commune":"Périgueux",          "dep":"24",  "urbanite":"periurbain", "budget":7000,
+     "profil":"Ouvrière laiterie",            "resume":"Mère célibataire, budget très contraint, yoga.",
+     "culture":"Patrimoine Périgord, préhistoire, gastronomie du Sud-Ouest",
+     "sport":"Yoga, marche en forêt, baignade Dordogne",
+     "travel":"Vacances Périgord noir, tourisme local, pas de grands voyages",
+     "skills":"Agroalimentaire, rigueur hygiène, conduite ligne de production",
+     "hobbies":"Aquarelle, jardinage, lecture, sorties musée avec enfants",
+     "besoins":["trajets domicile travail","Faire ses courses","Transport scolaire et périscolaire avec plusieurs enfants"]},
+
+    {"id":12, "avatar":"🏔️", "prenom":"Paul Coubrun",         "age":61, "commune":"Val-Cenis",          "dep":"73",  "urbanite":"montagne",   "budget":11000,
+     "profil":"Employé mairie alpine",        "resume":"Routes de montagne, lacets, proche retraite.",
+     "culture":"Culture savoyarde, patrimoine fortifié Maurienne, musique de montagne",
+     "sport":"Ski alpin et de fond, randonnée montagne, VTT électrique",
+     "travel":"Tourisme alpin Italie, Savoie, balades transfrontalières vélo",
+     "skills":"Administration publique, photographie, connaissance du terrain alpin",
+     "hobbies":"Photographie paysages, VTT, ski, randonnée Grand Arc",
+     "besoins":["trajets domicile travail","Faire ses courses","Tourisme Découverte d'un territoire","se rendre sur les sites d'activités sportives"]},
+
+    {"id":13, "avatar":"🥖",  "prenom":"Fabienne Assoun",     "age":57, "commune":"Niffer (68)",        "dep":"68",  "urbanite":"rural",      "budget":16000,
+     "profil":"Boulangère artisane",          "resume":"Alsace, village rural, budget professionnel artisan.",
+     "culture":"Culture alsacienne, marchés de Noël, gastronomie du Rhin",
+     "sport":"Vélo sur la Véloroute du Rhin, marche en forêt Noire, natation",
+     "travel":"Tourisme alsacien et rhénan, véloroute Rhin-Rhône, Allemagne proche",
+     "skills":"Boulangerie-pâtisserie artisanale, gestion TPE, réparation équipements four",
+     "hobbies":"Vélo sur voies vertes, cuisine alsacienne, jardinage aromatique",
+     "besoins":["pour artisans","Faire ses courses","trajets domicile travail"]},
+
+    {"id":14, "avatar":"🏗️", "prenom":"Antoine Zawada",       "age":35, "commune":"Paris 10e",          "dep":"75",  "urbanite":"urbain",     "budget":8000,
+     "profil":"Technicien HLM",               "resume":"Paris dense, Canal St-Martin, 25 km/h suffit.",
+     "culture":"Culture polonaise, Paris multiculturel, street art canal St-Martin",
+     "sport":"Vélo urbain quotidien Canal St-Martin, natation, foot avec enfants",
+     "travel":"Pologne en famille, vélo île-de-France, bord de Seine",
+     "skills":"Plomberie, électricité bâtiment, serrurerie, multimédia, bricolage tous corps",
+     "hobbies":"Vélo, bricolage et personnalisation objets, sorties famille Paris",
+     "besoins":["trajets domicile travail","Faire ses courses","Transport scolaire et périscolaire avec plusieurs enfants"]},
+
+    {"id":15, "avatar":"🌺",  "prenom":"Louis Proust",         "age":55, "commune":"Saint-Paul (Réunion)","dep":"974","urbanite":"ile",        "budget":15000,
+     "profil":"Chargé de mission mairie",     "resume":"Routes sinueuses île, orchidées, Grand Bénare.",
+     "culture":"Culture créole réunionnaise, maloya, patrimoine Réunion",
+     "sport":"Randonnée Grand Bénare, VTT sur pistes volcaniques, surf côtier",
+     "travel":"Tour de la Réunion à vélo, océan Indien, Madagascar",
+     "skills":"Gestion de projet, botanique tropicale, connaissance terrain insulaire",
+     "hobbies":"Orchidées et botanique, randonnée volcanique, VTT, plongée",
+     "besoins":["trajets domicile travail","Faire ses courses","Tourisme Découverte d'un territoire","se rendre sur les sites d'activités sportives"]},
+]
+
+# ─── DONNÉES VÉHICULES ────────────────────────────────────────────────────────
+VEHICLES = [
+    {"id":"circle",         "nom":"CIRCLE",             "fab":"CIRCLE-MOBILITY",        "cat":["L7e"],           "vitesse":90,  "prix":None,   "loc":350,  "usages":["Tourisme Découverte d'un territoire","Véhicule En libre service","Faire ses courses","trajets domicile travail","véhicules municipaux"]},
+    {"id":"sorean",         "nom":"Sorean",             "fab":"QBX",                    "cat":["L6eBP"],         "vitesse":45,  "prix":11990,  "loc":None, "usages":["trajets domicile travail","Faire ses courses","Tourisme Découverte d'un territoire"]},
+    {"id":"camigo",         "nom":"CamiGO",             "fab":"CAMINADE",               "cat":["VAE"],           "vitesse":25,  "prix":11000,  "loc":390,  "usages":["distribuer courrier et colis","Faire ses courses","pour opérateur de maintenance et entretien","pour artisans","véhicules municipaux","pour commerçants et stands mobiles"]},
+    {"id":"pelican1",       "nom":"Pelican Train",      "fab":"Pelican",                "cat":["VAE"],           "vitesse":25,  "prix":2990,   "loc":190,  "usages":["distribuer courrier et colis","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","se rendre sur les sites d'activités sportives","véhicules municipaux"]},
+    {"id":"ouicycle",       "nom":"Ouicycle",           "fab":"France Quadricycle",     "cat":["VAE","L1eA"],    "vitesse":25,  "prix":36000,  "loc":None, "usages":["Tourisme Découverte d'un territoire","Transport scolaire et périscolaire avec plusieurs enfants","véhicules municipaux"]},
+    {"id":"vivaldi",        "nom":"Urbaner VIVALDI",    "fab":"HPR SOLUTIONS",          "cat":["VAE"],           "vitesse":25,  "prix":8600,   "loc":None, "usages":["Faire ses courses","distribuer courrier et colis","trajets domicile travail","Tourisme Découverte d'un territoire","se rendre sur les sites d'activités sportives"]},
+    {"id":"boxoo",          "nom":"Urbaner BOXOO",      "fab":"HPR SOLUTIONS",          "cat":["VAE"],           "vitesse":25,  "prix":11500,  "loc":None, "usages":["distribuer courrier et colis","pour opérateur de maintenance et entretien","pour artisans","véhicules municipaux"]},
+    {"id":"promener",       "nom":"Urbaner PROMENER",   "fab":"HPR SOLUTIONS",          "cat":["VAE"],           "vitesse":25,  "prix":5400,   "loc":None, "usages":["Tourisme Découverte d'un territoire","Faire ses courses","se rendre sur les sites d'activités sportives","trajets domicile travail"]},
+    {"id":"tzer45",         "nom":"T-ZER 45",           "fab":"MOBILOW",                "cat":["L2e"],           "vitesse":45,  "prix":8000,   "loc":None, "usages":["Tourisme Découverte d'un territoire","Véhicule En libre service","Faire ses courses","se rendre sur les sites d'activités sportives","trajets domicile travail"]},
+    {"id":"supercycle",     "nom":"Supercycle",         "fab":"Supercycle",             "cat":["VAE"],           "vitesse":25,  "prix":9084,   "loc":None, "usages":["Tourisme Découverte d'un territoire","Faire ses courses","se rendre sur les sites d'activités sportives","trajets domicile travail"]},
+    {"id":"cygus",          "nom":"CYGUS",              "fab":"ERKA INDUSTRIES",        "cat":["VAE"],           "vitesse":25,  "prix":None,   "loc":None, "usages":["véhicules municipaux","pour commerçants et stands mobiles","pour artisans","pour opérateur de maintenance et entretien","distribuer courrier et colis"]},
+    {"id":"tzer90",         "nom":"T-ZER 90",           "fab":"MOBILOW",                "cat":["L5e"],           "vitesse":90,  "prix":12500,  "loc":None, "usages":["Tourisme Découverte d'un territoire","Véhicule En libre service","Faire ses courses","se rendre sur les sites d'activités sportives","trajets domicile travail"]},
+    {"id":"maillon-cargo",  "nom":"Maillon Cargo",      "fab":"Maillon Mobility",       "cat":["VAE"],           "vitesse":25,  "prix":9000,   "loc":None, "usages":["distribuer courrier et colis","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","pour secteur agricole","se rendre sur les sites d'activités sportives","surveillance incendie","véhicules municipaux"]},
+    {"id":"maillon-daily",  "nom":"Maillon Daily",      "fab":"Maillon Mobility",       "cat":["VAE"],           "vitesse":25,  "prix":9000,   "loc":None, "usages":["Tourisme Découverte d'un territoire","Véhicule En libre service","Faire ses courses","véhicules municipaux","trajets domicile travail","se rendre sur les sites d'activités sportives"]},
+    {"id":"nocar",          "nom":"Nocar",              "fab":"Helio2",                 "cat":["VAE"],           "vitesse":25,  "prix":17900,  "loc":None, "usages":["Tourisme Découverte d'un territoire","Faire ses courses","véhicules municipaux","trajets domicile travail"]},
+    {"id":"vemoo",          "nom":"VeMoo",              "fab":"VeMoo SAS",              "cat":["VAE"],           "vitesse":25,  "prix":10000,  "loc":None, "usages":["Tourisme Découverte d'un territoire","Faire ses courses","pour artisans","se rendre sur les sites d'activités sportives","trajets domicile travail"]},
+    {"id":"bob",            "nom":"BOB",                "fab":"Sanka Cycle",            "cat":["VAE"],           "vitesse":25,  "prix":12000,  "loc":None, "usages":["trajets domicile travail","Faire ses courses","se rendre sur les sites d'activités sportives","véhicules municipaux"]},
+    {"id":"bagnole",        "nom":"La bagnole",         "fab":"KILOW",                  "cat":["L6eB","L7e"],    "vitesse":80,  "prix":13000,  "loc":None, "usages":["distribuer courrier et colis","Tourisme Découverte d'un territoire","Faire ses courses","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","pour secteur agricole","Transport scolaire et périscolaire avec plusieurs enfants","se rendre sur les sites d'activités sportives","surveillance incendie","trajets domicile travail","véhicules municipaux"]},
+    {"id":"ulive",          "nom":"Ulive",              "fab":"Avatar Mobilité",        "cat":["L7e","L7eC"],    "vitesse":90,  "prix":15000,  "loc":None, "usages":["distribuer courrier et colis","Tourisme Découverte d'un territoire","Véhicule En libre service","Faire ses courses","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","se rendre sur les sites d'activités sportives","trajets domicile travail","véhicules municipaux","pour secteur agricole"]},
+    {"id":"vuf-poly",       "nom":"VUF XXL MAX POLY",   "fab":"VUF BIKES",              "cat":["VAE"],           "vitesse":25,  "prix":7500,   "loc":None, "usages":["distribuer courrier et colis","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","pour secteur agricole","surveillance incendie","véhicules municipaux"]},
+    {"id":"vuf-taxi",       "nom":"VUF XXL TAXI",       "fab":"VUF BIKES",              "cat":["VAE"],           "vitesse":25,  "prix":7500,   "loc":None, "usages":["Tourisme Découverte d'un territoire","véhicules municipaux","se rendre sur les sites d'activités sportives"]},
+    {"id":"dual",           "nom":"DUAL",               "fab":"AEMOTION",               "cat":["L5e"],           "vitesse":115, "prix":19000,  "loc":None, "usages":["Faire ses courses","pour opérateur de maintenance et entretien","trajets domicile travail","véhicules municipaux"]},
+    {"id":"midipile",       "nom":"MIDIPILE",           "fab":"MIDIPILE",               "cat":["L6eBU"],         "vitesse":45,  "prix":15500,  "loc":None, "usages":["distribuer courrier et colis","Tourisme Découverte d'un territoire","Faire ses courses","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","se rendre sur les sites d'activités sportives","surveillance incendie","trajets domicile travail","véhicules municipaux"]},
+    {"id":"kozi",           "nom":"KOZI",               "fab":"Karbikes",               "cat":["VAE"],           "vitesse":25,  "prix":10625,  "loc":None, "usages":["Tourisme Découverte d'un territoire","Véhicule En libre service","Faire ses courses","se rendre sur les sites d'activités sportives","Transport scolaire et périscolaire avec plusieurs enfants","trajets domicile travail"]},
+    {"id":"koli",           "nom":"KOLI",               "fab":"Karbikes",               "cat":["VAE"],           "vitesse":25,  "prix":12150,  "loc":None, "usages":["distribuer courrier et colis","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","se rendre sur les sites d'activités sportives"]},
+    {"id":"kubi",           "nom":"KUBI",               "fab":"Karbikes",               "cat":["VAE"],           "vitesse":25,  "prix":10800,  "loc":None, "usages":["distribuer courrier et colis","Faire ses courses","pour opérateur de maintenance et entretien","véhicules municipaux","pour artisans"]},
+    {"id":"kari",           "nom":"KARI",               "fab":"Karbikes",               "cat":["VAE"],           "vitesse":25,  "prix":11050,  "loc":None, "usages":["pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","véhicules municipaux"]},
+    {"id":"weez",           "nom":"Weez Lite",          "fab":"Eon Motors",             "cat":["L7e"],           "vitesse":90,  "prix":14200,  "loc":None, "usages":["distribuer courrier et colis","Tourisme Découverte d'un territoire","Véhicule En libre service","Faire ses courses","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","se rendre sur les sites d'activités sportives","surveillance incendie","trajets domicile travail","véhicules municipaux"]},
+    {"id":"arsene",         "nom":"Arsène",             "fab":"Arsène",                 "cat":["L7eC"],          "vitesse":80,  "prix":13300,  "loc":None, "usages":["Faire ses courses","pour artisans","se rendre sur les sites d'activités sportives","trajets domicile travail","véhicules municipaux","Tourisme Découverte d'un territoire"]},
+    {"id":"woodybus",       "nom":"Woodybus",           "fab":"Humbird",                "cat":["VAE"],           "vitesse":25,  "prix":19990,  "loc":None, "usages":["Transport scolaire et périscolaire avec plusieurs enfants","se rendre sur les sites d'activités sportives","véhicules municipaux","trajets domicile travail","Tourisme Découverte d'un territoire"]},
+    {"id":"act31",          "nom":"ACT3.1 VAE",         "fab":"Acticycle",              "cat":["VAE"],           "vitesse":25,  "prix":9917,   "loc":None, "usages":["distribuer courrier et colis","Tourisme Découverte d'un territoire","Faire ses courses","pour opérateur de maintenance et entretien","pour artisans","se rendre sur les sites d'activités sportives","trajets domicile travail","véhicules municipaux"]},
+    {"id":"act36",          "nom":"ACT3.6 RANDO",       "fab":"Acticycle",              "cat":["L6eBP"],         "vitesse":45,  "prix":12000,  "loc":None, "usages":["distribuer courrier et colis","Tourisme Découverte d'un territoire","Faire ses courses","pour opérateur de maintenance et entretien","pour artisans","trajets domicile travail","véhicules municipaux"]},
+    {"id":"eroe25c",        "nom":"e-roe 25 Cargo",     "fab":"E-ROE",                  "cat":["VAE"],           "vitesse":25,  "prix":9400,   "loc":None, "usages":["distribuer courrier et colis","Véhicule En libre service","Faire ses courses","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","se rendre sur les sites d'activités sportives","surveillance incendie","véhicules municipaux"]},
+    {"id":"eroe25p",        "nom":"e-roe 25 Passenger", "fab":"E-ROE",                  "cat":["VAE"],           "vitesse":25,  "prix":9400,   "loc":None, "usages":["Tourisme Découverte d'un territoire","Véhicule En libre service","Faire ses courses","se rendre sur les sites d'activités sportives","Transport scolaire et périscolaire avec plusieurs enfants","trajets domicile travail","véhicules municipaux"]},
+    {"id":"eroe45p",        "nom":"e-roe 45 Passenger", "fab":"E-ROE",                  "cat":["L6eB","L6eBP"],  "vitesse":45,  "prix":9800,   "loc":None, "usages":["Tourisme Découverte d'un territoire","Véhicule En libre service","Faire ses courses","Transport scolaire et périscolaire avec plusieurs enfants","se rendre sur les sites d'activités sportives","trajets domicile travail","véhicules municipaux"]},
+    {"id":"eroe45c",        "nom":"e-roe 45 Cargo",     "fab":"E-ROE",                  "cat":["L6eB","L6eBU"],  "vitesse":45,  "prix":9800,   "loc":None, "usages":["distribuer courrier et colis","Véhicule En libre service","Faire ses courses","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","surveillance incendie","véhicules municipaux"]},
+    {"id":"mstracker",      "nom":"MS TRACKER",         "fab":"MOBISLOW",               "cat":["L7e","L7eC","L6eB"],"vitesse":80,"prix":13000,  "loc":None, "usages":["distribuer courrier et colis","Tourisme Découverte d'un territoire","Faire ses courses","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","pour secteur agricole","se rendre sur les sites d'activités sportives","surveillance incendie","trajets domicile travail","véhicules municipaux"]},
+    {"id":"xbikium",        "nom":"X-Bikium Utility",   "fab":"X-Bikium",               "cat":["VAE"],           "vitesse":25,  "prix":5990,   "loc":None, "usages":["distribuer courrier et colis","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","véhicules municipaux"]},
+    {"id":"pelican2",       "nom":"PelicanTrain",       "fab":"Pelican Cycles",         "cat":["VAE"],           "vitesse":25,  "prix":7490,   "loc":None, "usages":["distribuer courrier et colis","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","véhicules municipaux"]},
+    {"id":"moskitos",       "nom":"moskitOS",           "fab":"moskitOS",               "cat":["VAE"],           "vitesse":100, "prix":1200,   "loc":None, "usages":["Tourisme Découverte d'un territoire","Faire ses courses","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","se rendre sur les sites d'activités sportives","trajets domicile travail"]},
+    {"id":"kiwee",          "nom":"KIWEE",              "fab":"METACAR MOBILITY SYSTEMS","cat":["L6eB","L6eBP"],  "vitesse":45,  "prix":20000,  "loc":None, "usages":["Tourisme Découverte d'un territoire","Véhicule En libre service","Faire ses courses","pour opérateur de maintenance et entretien","trajets domicile travail","véhicules municipaux"]},
+    {"id":"baker",          "nom":"Baker-Prax",         "fab":"PRAX",                   "cat":["VAE"],           "vitesse":25,  "prix":11600,  "loc":None, "usages":["distribuer courrier et colis","Faire ses courses","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","pour secteur agricole","surveillance incendie","véhicules municipaux","trajets domicile travail"]},
+    {"id":"cyclesmidi",     "nom":"Cargo Cycles du Midi","fab":"Cycles du Midi",        "cat":["VAE"],           "vitesse":25,  "prix":4200,   "loc":None, "usages":["Tourisme Découverte d'un territoire","Faire ses courses","pour artisans","pour commerçants et stands mobiles","trajets domicile travail","Véhicule En libre service","distribuer courrier et colis"]},
+    {"id":"aemotion2",      "nom":"AEMOTION L5e",       "fab":"AEMOTION",               "cat":["L5e"],           "vitesse":115, "prix":None,   "loc":None, "usages":["pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","trajets domicile travail","véhicules municipaux"]},
+    {"id":"bigtetu",        "nom":"BigTetu",            "fab":"BigTetu Cargo Bikes",    "cat":["VAE","L1eA"],    "vitesse":25,  "prix":6209,   "loc":None, "usages":["distribuer courrier et colis","Véhicule En libre service","Faire ses courses","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","se rendre sur les sites d'activités sportives","surveillance incendie","véhicules municipaux"]},
+    {"id":"fourmi",         "nom":"La Fourmi",          "fab":"AirNAM",                 "cat":["VAE"],           "vitesse":25,  "prix":3625,   "loc":None, "usages":["Tourisme Découverte d'un territoire","Faire ses courses","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","se rendre sur les sites d'activités sportives"]},
+    {"id":"drakkar-nobox-l","nom":"DRAKKAR NoBox L",    "fab":"BLUEMOOOV",              "cat":["VAE"],           "vitesse":25,  "prix":8990,   "loc":None, "usages":["pour opérateur de maintenance et entretien","distribuer courrier et colis"]},
+    {"id":"ketch-cleen",    "nom":"KETCH CLEEN",        "fab":"BLUEMOOOV",              "cat":["VAE"],           "vitesse":25,  "prix":7549,   "loc":None, "usages":["pour opérateur de maintenance et entretien","véhicules municipaux"]},
+    {"id":"ketch-stand",    "nom":"KETCH STAND",        "fab":"BLUEMOOOV",              "cat":["VAE"],           "vitesse":25,  "prix":10888,  "loc":None, "usages":["pour commerçants et stands mobiles","véhicules municipaux"]},
+    {"id":"ketch-delivery", "nom":"KETCH DELIVERY",     "fab":"BLUEMOOOV",              "cat":["VAE"],           "vitesse":25,  "prix":9199,   "loc":None, "usages":["distribuer courrier et colis","pour artisans","véhicules municipaux","se rendre sur les sites d'activités sportives","pour commerçants et stands mobiles","Faire ses courses"]},
+    {"id":"ketch-nobox",    "nom":"KETCH NOBOX",        "fab":"BLUEMOOOV",              "cat":["VAE"],           "vitesse":25,  "prix":6499,   "loc":None, "usages":["pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","véhicules municipaux","distribuer courrier et colis"]},
+    {"id":"clipper-food",   "nom":"CLIPPER FOOD",       "fab":"BLUEMOOOV",              "cat":["VAE"],           "vitesse":25,  "prix":13999,  "loc":None, "usages":["pour commerçants et stands mobiles"]},
+    {"id":"clipper-nobox",  "nom":"CLIPPER NOBOX",      "fab":"BLUEMOOOV",              "cat":["VAE"],           "vitesse":25,  "prix":6999,   "loc":None, "usages":["distribuer courrier et colis","pour opérateur de maintenance et entretien","pour artisans","pour commerçants et stands mobiles","véhicules municipaux"]},
+    {"id":"drakkar-cargo-l","nom":"DRAKKAR CARGO L",    "fab":"BLUEMOOOV",              "cat":["VAE"],           "vitesse":25,  "prix":20999,  "loc":None, "usages":["distribuer courrier et colis","Faire ses courses","pour artisans","pour commerçants et stands mobiles","véhicules municipaux"]},
+    {"id":"drakkar-green-l","nom":"DRAKKAR GREEN L",    "fab":"BLUEMOOOV",              "cat":["VAE"],           "vitesse":25,  "prix":18999,  "loc":None, "usages":["pour artisans","pour secteur agricole","véhicules municipaux","pour opérateur de maintenance et entretien"]},
+    {"id":"drakkar-flat-l", "nom":"DRAKKAR FLAT L",     "fab":"BLUEMOOOV",              "cat":["VAE"],           "vitesse":25,  "prix":16599,  "loc":None, "usages":["pour opérateur de maintenance et entretien","pour artisans","véhicules municipaux"]},
+    {"id":"drakkar-nobox-s","nom":"DRAKKAR NoBox S",    "fab":"BLUEMOOOV",              "cat":["VAE"],           "vitesse":25,  "prix":12999,  "loc":None, "usages":["pour opérateur de maintenance et entretien","véhicules municipaux"]},
+    {"id":"drakkar-cargo-s","nom":"DRAKKAR CARGO S",    "fab":"BLUEMOOOV",              "cat":["VAE"],           "vitesse":25,  "prix":18999,  "loc":None, "usages":["pour opérateur de maintenance et entretien","véhicules municipaux","distribuer courrier et colis"]},
+    {"id":"drakkar-green-s","nom":"DRAKKAR GREEN S",    "fab":"BLUEMOOOV",              "cat":["VAE"],           "vitesse":25,  "prix":16999,  "loc":None, "usages":["pour opérateur de maintenance et entretien","pour artisans","pour secteur agricole","véhicules municipaux"]},
+    {"id":"drakkar-flat-s", "nom":"DRAKKAR FLAT S",     "fab":"BLUEMOOOV",              "cat":["VAE"],           "vitesse":25,  "prix":14999,  "loc":None, "usages":["pour opérateur de maintenance et entretien","pour artisans","véhicules municipaux","pour secteur agricole"]},
+]
+
+# ── Actif/Passif : valeur réelle issue du champ Airtable "Véhicule Actif ou Passif" ──
+# Actif  = pédalage obligatoire (VAE, certains L6e…)
+# Passif = pas de pédalage (quadricycle, 2-roues motorisé…)
+ACTIF_PASSIF = {
+    "CIRCLE": "Passif",
+    "CamiGO": "Actif",
+    "Sorean": "Actif",
+    "Pelican Train": "Actif",
+    "Ouicycle": "Actif",
+    "Urbaner VIVALDI": "Actif",
+    "Urbaner BOXOO": "Actif",
+    "Urbaner PROMENER": "Actif",
+    "T-ZER 45": "Passif",
+    "T-ZER 90": "Passif",
+    "Supercycle": "Actif",
+    "CYGUS": "Actif",
+    "Maillon Cargo": "Actif",
+    "Maillon Daily": "Actif",
+    "Nocar": "Actif",
+    "VeMoo": "Actif",
+    "BOB": "Actif",
+    "La bagnole": "Passif",
+    "Ulive": "Passif",
+    "VUF XXL MAX POLY": "Actif",
+    "VUF XXL TAXI": "Actif",
+    "DUAL": "Passif",
+    "MIDIPILE": "Actif",
+    "KOZI": "Actif",
+    "KOLI": "Actif",
+    "KUBI": "Actif",
+    "KARI": "Actif",
+    "Weez Lite": "Passif",
+    "Arsène": "Passif",
+    "Woodybus": "Actif",
+    "ACT3.1 VAE": "Actif",
+    "ACT3.6 RANDO": "Actif",
+    "e-roe 25 Cargo": "Actif",
+    "e-roe 25 Passenger": "Actif",
+    "e-roe 45 Passenger": "Passif",
+    "e-roe 45 Cargo": "Passif",
+    "MS TRACKER": "Passif",
+    "X-Bikium Utility": "Actif",
+    "PelicanTrain": "Actif",
+    "moskitOS": "Actif",
+    "KIWEE": "Passif",
+    "Baker-Prax": "Actif",
+    "Cargo Cycles du Midi": "Actif",
+    "AEMOTION L5e": "Passif",
+    "BigTetu": "Actif",
+    "La Fourmi": "Actif",
+    "DRAKKAR NoBox L": "Actif",
+    "KETCH CLEEN": "Actif",
+    "KETCH STAND": "Actif",
+    "KETCH DELIVERY": "Actif",
+    "KETCH NOBOX": "Actif",
+    "CLIPPER FOOD": "Actif",
+    "CLIPPER NOBOX": "Actif",
+    "DRAKKAR CARGO L": "Actif",
+    "DRAKKAR GREEN L": "Actif",
+    "DRAKKAR FLAT L": "Actif",
+    "DRAKKAR NoBox S": "Actif",
+    "DRAKKAR CARGO S": "Actif",
+    "DRAKKAR GREEN S": "Actif",
+    "DRAKKAR FLAT S": "Actif",
+}
+
+def is_actif(v):  return ACTIF_PASSIF.get(v["nom"], "Actif") == "Actif"
+def is_passif(v): return ACTIF_PASSIF.get(v["nom"], "Actif") == "Passif"
+
+URBANITE_LABELS = {"urbain":"🏙️ Urbain","periurbain":"🏘️ Périurbain",
+                   "rural":"🌾 Rural","montagne":"🏔️ Montagne","ile":"🌊 Île"}
+
+# Mots-clés pour détection d'affinité profil ─────────────────────────────────
+KW_VELO    = ["vélo","vtt","cyclisme","bikepacking","véloroute","cycle","biking"]
+KW_TRAVEL  = ["tourisme","voyage","découverte","road trip","tour de","balade","randonn"]
+KW_BRICO   = ["bricolage","mécanique","réparation","soudure","électricité","plomberie",
+              "électronique","maintenance","repair","diy","entretien","moto"]
+
+def _match(text, keywords):
+    t = text.lower()
+    return any(k in t for k in keywords)
+
+def affinity_score(persona, vehicle):
+    """Bonus 0-20 pts basé sur culture/sport/travel/skills/hobbies du persona."""
+    sport  = persona.get("sport","")
+    travel = persona.get("travel","")
+    skills = persona.get("skills","")
+    hobbies= persona.get("hobbies","")
+    profil_text = f"{sport} {skills} {hobbies}"
+
+    bonus = 0
+    flags = []
+
+    # +8 pts : pratique du vélo/VTT → affinité naturelle avec véhicule actif (VAE)
+    if _match(sport + " " + hobbies, KW_VELO) and is_actif(vehicle):
+        bonus += 8
+        flags.append("🚴 Cycliste → VAE adapté")
+
+    # +4 pts : goût du voyage/tourisme → vehicle avec usage Tourisme
+    if _match(travel + " " + sport, KW_TRAVEL) and "Tourisme Découverte d'un territoire" in vehicle["usages"]:
+        bonus += 4
+        flags.append("🗺️ Voyageur → usage Tourisme")
+
+    # +8 pts : bricolage/mécanique → VAE simple à entretenir soi-même
+    if _match(profil_text, KW_BRICO) and is_actif(vehicle):
+        bonus += 8
+        flags.append("🔧 Bricoleur → entretien autonome possible")
+
+    return min(bonus, 20), flags  # plafond à 20 pts
+
+# ─── ALGO DE SCORING ──────────────────────────────────────────────────────────
+def speed_score(urbanite, vitesse):
+    table = {
+        "urbain":     {25:40, 45:35, 999:28},
+        "periurbain": {25:8,  45:38, 999:40},
+        "rural":      {25:0,  45:22, 999:40},
+        "montagne":   {25:0,  45:15, 999:40},
+        "ile":        {25:8,  45:28, 999:40},
+    }
+    row = table.get(urbanite, {25:15, 45:25, 999:30})
+    if vitesse <= 25: return row[25]
+    if vitesse <= 45: return row[45]
+    return row[999]
+
+def compute_score(persona, vehicle, budget):
+    # Budget (30 pts)
+    if vehicle["prix"] is None:
+        b = 12
+    else:
+        r = vehicle["prix"] / budget
+        b = 30 if r<=1 else 22 if r<=1.25 else 14 if r<=1.5 else 6 if r<=2 else 0
+
+    # Territoire (40 pts)
+    s = speed_score(persona["urbanite"], vehicle["vitesse"])
+
+    # Usages (30 pts)
+    covered   = [x for x in persona["besoins"] if x in vehicle["usages"]]
+    uncovered = [x for x in persona["besoins"] if x not in vehicle["usages"]]
+    u = round((len(covered) / len(persona["besoins"])) * 30) if persona["besoins"] else 15
+
+    # Affinité profil (0-20 pts bonus — sport vélo, travel, bricolage)
+    a, flags = affinity_score(persona, vehicle)
+
+    return {"b":b, "s":s, "u":u, "a":a, "affinity_flags":flags,
+            "base":b+s+u, "total":b+s+u+a,
+            "covered":covered, "uncovered":uncovered}
+
+def badge_info(total):
+    # seuils sur 120 (base 100 + bonus affinité 20)
+    if total >= 100: return "🟢 Excellent",  "#dcfce7", "#14532d"
+    if total >= 82:  return "🔵 Bon match",  "#dbeafe", "#1e3a8a"
+    if total >= 58:  return "🟡 Partiel",    "#fef3c7", "#78350f"
+    if total >= 34:  return "🟠 Faible",     "#ffedd5", "#7c2d12"
+    return               "🔴 Non adapté",    "#fee2e2", "#7f1d1d"
+
+def bar_color(total):
+    if total >= 100: return "#16a34a"
+    if total >= 82:  return "#2563eb"
+    if total >= 58:  return "#d97706"
+    if total >= 34:  return "#ea580c"
+    return "#dc2626"
+
+# ─── INIT SESSION STATE ───────────────────────────────────────────────────────
+if "reactions" not in st.session_state:
+    st.session_state.reactions = {}
+
+# ─── SIDEBAR : sélection persona ─────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("## 🚲 Simulateur Vélis")
+    st.markdown("**15 Personas** · NVIDIA Nemotron-FR")
+    st.divider()
+    persona_labels = [f"{p['avatar']}  {p['prenom']}  ·  {p['age']} ans\n{p['commune']}" for p in PERSONAS]
+    selected_idx   = st.radio("Choisir un persona", range(len(PERSONAS)),
+                              format_func=lambda i: persona_labels[i], label_visibility="collapsed")
+    persona = PERSONAS[selected_idx]
+
+# ─── HEADER : infos persona + curseur budget ─────────────────────────────────
+col_avatar, col_info, col_stats = st.columns([1, 5, 2])
+
+with col_avatar:
+    st.markdown(f"<div style='font-size:64px;line-height:1;margin-top:10px'>{persona['avatar']}</div>",
+                unsafe_allow_html=True)
+
+with col_info:
+    st.markdown(f"### {persona['prenom']} — {persona['age']} ans")
+    st.markdown(f"*{persona['profil']}* · {persona['commune']} ({persona['dep']}) · {URBANITE_LABELS[persona['urbanite']]}")
+    st.caption(persona["resume"])
+    besoins_html = " ".join([f"<span class='tag-neu'>{b}</span>" for b in persona["besoins"]])
+    st.markdown(besoins_html, unsafe_allow_html=True)
+
+    with st.expander("🔍 Profil détaillé — culture, sport, voyages, compétences"):
+        dc1, dc2 = st.columns(2)
+        with dc1:
+            st.markdown(f"**🎭 Culture**  \n{persona.get('culture','—')}")
+            st.markdown(f"**🏃 Sport**  \n{persona.get('sport','—')}")
+            st.markdown(f"**✈️ Voyages**  \n{persona.get('travel','—')}")
+        with dc2:
+            st.markdown(f"**🔧 Compétences**  \n{persona.get('skills','—')}")
+            st.markdown(f"**🎯 Hobbies**  \n{persona.get('hobbies','—')}")
+        # Indicateurs d'affinité calculés
+        has_velo   = _match(persona.get("sport","")+" "+persona.get("hobbies",""), KW_VELO)
+        has_travel = _match(persona.get("travel","")+" "+persona.get("sport",""),   KW_TRAVEL)
+        has_brico  = _match(persona.get("skills","")+" "+persona.get("hobbies",""), KW_BRICO)
+        indi = []
+        if has_velo:   indi.append("🚴 Pratique le vélo → **bonus +8 pts** sur les VAE")
+        if has_travel: indi.append("🗺️ Aime voyager → **bonus +4 pts** si usage Tourisme")
+        if has_brico:  indi.append("🔧 Bricoleur/mécano → **bonus +8 pts** entretien autonome VAE")
+        if indi:
+            st.divider()
+            st.markdown("**Affinités détectées (bonus scoring)**")
+            for i in indi:
+                st.markdown(f"- {i}")
+
+budget = st.slider(
+    f"💰 Budget d'achat  *(défaut persona : {persona['budget']:,} €)*",
+    min_value=1000, max_value=40000, step=500, value=persona["budget"],
+    format="%d €"
+)
+
+st.divider()
+
+# ─── FILTRES ─────────────────────────────────────────────────────────────────
+fc1, fc2, fc3 = st.columns(3)
+with fc1:
+    filtre_vitesse = st.selectbox("🚀 Vitesse maxi", ["Tous","≤ 25 km/h","≤ 45 km/h","≤ 90 km/h"])
+with fc2:
+    filtre_mode = st.selectbox("🚴 Motorisation", ["Tous","Actif (avec pédalage)","Passif (sans pédalage)"],
+                               help="Actif = VAE / vélo à assistance électrique | Passif = quadricycle, 2-roues motorisé")
+with fc3:
+    filtre_fin = st.selectbox("💳 Financement", ["Tous","Prix connu (achat)","Location disponible"])
+
+# ─── FILTRAGE + SCORING ───────────────────────────────────────────────────────
+def apply_filters(v):
+    if filtre_vitesse == "≤ 25 km/h"  and v["vitesse"] > 25:  return False
+    if filtre_vitesse == "≤ 45 km/h"  and v["vitesse"] > 45:  return False
+    if filtre_vitesse == "≤ 90 km/h"  and v["vitesse"] > 90:  return False
+    if filtre_mode   == "Actif (avec pédalage)"   and not is_actif(v):  return False
+    if filtre_mode   == "Passif (sans pédalage)"  and not is_passif(v): return False
+    if filtre_fin    == "Prix connu (achat)"   and v["prix"] is None: return False
+    if filtre_fin    == "Location disponible"  and v["loc"]  is None: return False
+    return True
+
+scored = []
+for v in VEHICLES:
+    if not apply_filters(v):
+        continue
+    sc = compute_score(persona, v, budget)
+    scored.append({**v, **sc})
+
+scored.sort(key=lambda x: x["total"], reverse=True)
+
+# Compteurs
+nb_excellent = sum(1 for v in scored if v["total"] >= 100)
+nb_bon       = sum(1 for v in scored if 82 <= v["total"] < 100)
+nb_partiel   = sum(1 for v in scored if 58 <= v["total"] < 82)
+
+with col_stats:
+    st.caption("Scores sur les véhicules filtrés")
+    m1, m2, m3 = st.columns(3)
+    m1.metric("🟢 Excellent (≥100)", nb_excellent)
+    m2.metric("🔵 Bon match (≥82)",  nb_bon)
+    m3.metric("🟡 Partiel (≥58)",    nb_partiel)
+
+st.markdown(f"**{len(scored)} véhicules** · score = Budget(30) + Territoire(40) + Usages(30) + Affinité profil(+20 max) = **/120**")
+st.divider()
+
+# ─── AFFICHAGE VÉHICULES ─────────────────────────────────────────────────────
+if not scored:
+    st.warning("Aucun véhicule ne correspond à ces filtres. Essaie d'en assouplir certains.")
+else:
+    for i, v in enumerate(scored):
+        label, bg, txt = badge_info(v["total"])
+        color = bar_color(v["total"])
+        prix_str  = f"{v['prix']:,} € HT" if v["prix"] is not None else "sur devis"
+        loc_str   = f"· loc. {v['loc']} €/mois" if v["loc"] else ""
+        cats_str  = " / ".join(v["cat"])
+        ap_val    = ACTIF_PASSIF.get(v["nom"], "?")
+        ap_badge  = ("🚴 Actif" if ap_val == "Actif" else "🛞 Passif")
+        ap_bg     = "#dcfce7" if ap_val == "Actif" else "#e0e7ff"
+        ap_txt    = "#15803d" if ap_val == "Actif" else "#3730a3"
+
+        prix_ok   = v["prix"] is not None and v["prix"] <= budget
+        prix_high = v["prix"] is not None and v["prix"] > budget
+
+        with st.container(border=True):
+            c1, c2 = st.columns([1, 7])
+            with c1:
+                st.markdown(f"<div style='text-align:center'>"
+                            f"<div style='font-size:11px;color:#94a3b8'>#{i+1}</div>"
+                            f"<div style='font-size:32px;font-weight:700;color:{color}'>{v['total']}</div>"
+                            f"<div style='font-size:9px;color:#94a3b8'>/120</div>"
+                            f"<span style='background:{bg};color:{txt};padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600'>{label}</span>"
+                            f"</div>", unsafe_allow_html=True)
+            with c2:
+                # Nom + badges inline
+                prix_color = "#15803d" if prix_ok else ("#b91c1c" if prix_high else "#854d0e")
+                prix_bg    = "#dcfce7" if prix_ok else ("#fee2e2" if prix_high else "#fef9c3")
+                st.markdown(
+                    f"**{v['nom']}** &nbsp; <span style='color:#94a3b8;font-size:13px'>{v['fab']}</span> &nbsp;"
+                    f"<span class='tag-neu'>{cats_str}</span> &nbsp;"
+                    f"<span style='background:{ap_bg};color:{ap_txt};padding:1px 7px;border-radius:4px;font-size:11px;font-weight:600'>{ap_badge}</span> &nbsp;"
+                    f"<span class='tag-neu'>{v['vitesse']} km/h</span> &nbsp;"
+                    f"<span style='background:{prix_bg};color:{prix_color};padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600'>{prix_str}</span>"
+                    + (f" &nbsp;<span style='background:#ede9fe;color:#5b21b6;padding:2px 7px;border-radius:4px;font-size:11px'>{loc_str.strip()}</span>" if loc_str else ""),
+                    unsafe_allow_html=True
+                )
+
+                # Barres de progression (base 100 + bonus affinité)
+                bc1, bc2, bc3, bc4 = st.columns(4)
+                bc1.progress(v["b"]/30, text=f"💰 Budget : {v['b']}/30")
+                bc2.progress(v["s"]/40, text=f"🗺️ Territoire : {v['s']}/40")
+                bc3.progress(v["u"]/30, text=f"🎯 Usages : {v['u']}/30")
+                bc4.progress(v["a"]/20, text=f"✨ Affinité : +{v['a']}/20")
+
+                # Flags affinité
+                if v["affinity_flags"]:
+                    flags_html = " &nbsp;".join([
+                        f"<span style='background:#fdf4ff;color:#7e22ce;padding:2px 8px;border-radius:4px;font-size:11px'>{f}</span>"
+                        for f in v["affinity_flags"]
+                    ])
+                    st.markdown(flags_html, unsafe_allow_html=True)
+
+                # Tags usages couverts / manquants
+                tags_html = (
+                    " ".join([f"<span class='tag-ok'>✓ {b}</span>" for b in v["covered"]]) + " " +
+                    " ".join([f"<span class='tag-ko'>✗ {b}</span>" for b in v["uncovered"]])
+                )
+                st.markdown(tags_html, unsafe_allow_html=True)
+
+                # Bouton réaction IA — clé inclut le budget pour permettre de rejouer si budget modifié
+                key = f"{persona['id']}-{v['id']}-{budget}"
+                if key in st.session_state.reactions:
+                    st.markdown(
+                        f"<div class='reaction-box'>"
+                        f"<div style='font-size:10px;color:#6366f1;font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em'>"
+                        f"Réaction de {persona['prenom'].split()[0]}</div>"
+                        f"{st.session_state.reactions[key]}</div>",
+                        unsafe_allow_html=True
+                    )
+                else:
+                    if st.button(f"✦ Simuler la réaction de {persona['prenom'].split()[0]}", key=f"btn_{key}"):
+                        with st.spinner("Génération en cours…"):
+                            affinity_ctx = ""
+                            if v["affinity_flags"]:
+                                affinity_ctx = f"\nTes affinités détectées avec ce véhicule : {', '.join(v['affinity_flags'])}."
+                            prompt = (
+                                f"Tu es {persona['prenom']}, {persona['age']} ans, {persona['profil']}, "
+                                f"habitant {persona['commune']} ({persona['dep']}). {persona['resume']}\n"
+                                f"Culture : {persona.get('culture','')}. "
+                                f"Sport : {persona.get('sport','')}. "
+                                f"Voyages : {persona.get('travel','')}. "
+                                f"Compétences : {persona.get('skills','')}. "
+                                f"Hobbies : {persona.get('hobbies','')}.\n"
+                                f"Budget mobilité : {budget:,}€. Besoins : {', '.join(persona['besoins'])}. "
+                                f"Territoire : {URBANITE_LABELS[persona['urbanite']]}."
+                                f"{affinity_ctx}\n\n"
+                                f"Tu découvres le \"{v['nom']}\" ({v['fab']}) — {v['vitesse']} km/h, "
+                                f"catégorie {ap_val.lower()} ({'avec pédalage' if ap_val=='Actif' else 'sans pédalage'}), "
+                                f"{prix_str}{(' · location '+str(v['loc'])+'€/mois') if v['loc'] else ''}.\n\n"
+                                f"En 2-3 phrases à la 1ère personne, donne ta réaction sincère sur ce véhicule. "
+                                f"Intègre ton profil (sport, bricolage, voyages si pertinent). "
+                                f"Sois concret sur le territoire, le prix, et l'usage quotidien."
+                            )
+                            try:
+                                client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+                                message = client.messages.create(
+                                    model="claude-sonnet-4-20250514",
+                                    max_tokens=350,
+                                    messages=[{"role":"user","content":prompt}]
+                                )
+                                st.session_state.reactions[key] = message.content[0].text
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erreur API : {e}")
