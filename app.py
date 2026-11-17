@@ -1955,7 +1955,8 @@ Un seul réglage partagé — modifiez-le pour voir l'impact des aides sur le sc
                                             message = client.messages.create(
                                                 model="claude-haiku-5-5", max_tokens=350,
                                                 messages=[{"role":"user","content":prompt}])
-                                            st.session_state.reactions[key] = message.content[0].text
+                                            text_block = next((b for b in message.content if b.type == "text"), None)
+                                            st.session_state.reactions[key] = text_block.text if text_block else "(réponse vide)"
                                             st.rerun()
                                         except Exception as e:
                                             st.error(f"Erreur API : {e}")
