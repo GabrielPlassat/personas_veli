@@ -1953,9 +1953,9 @@ Un seul réglage partagé — modifiez-le pour voir l'impact des aides sur le sc
                                         try:
                                             client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
                                             message = client.messages.create(
-                                                model="claude-haiku-5-5", max_tokens=350,
+                                                model="claude-haiku-4-5", max_tokens=350,
                                                 messages=[{"role":"user","content":prompt}])
-                                            text_block = next((b for b in message.content if b.type == "text"), None)
+                                            text_block = next((b for b in message.content if hasattr(b, "text")), None)
                                             st.session_state.reactions[key] = text_block.text if text_block else "(réponse vide)"
                                             st.rerun()
                                         except Exception as e:
