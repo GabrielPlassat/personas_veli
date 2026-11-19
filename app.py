@@ -1832,18 +1832,36 @@ Un seul réglage partagé — modifiez-le pour voir l'impact des aides sur le sc
 
         nb_p = len(active_personas)
         if st.session_state.personas_source == "csv":
-            st.caption(f"✅ {nb_p} personas Colab chargés")
+            st.caption(f"✅ {nb_p:,} personas Colab chargés")
         else:
             st.caption(f"15 personas de démonstration (Nemotron)")
 
-        persona_labels = [
-            f"{p['avatar']}  {p['prenom']}  ·  {p['age']} ans\n{p['commune']}"
-            for p in active_personas
-        ]
-        selected_idx = st.radio(
-            "Choisir un persona", range(len(active_personas)),
-            format_func=lambda i: persona_labels[i], label_visibility="collapsed"
-        )
+        # Sélection adaptée au volume :
+        # ≤ 50 personas → radio (liste lisible)
+        # > 50 personas → numéro d'index (évite de rendre 200 000 options)
+        if nb_p <= 50:
+            persona_labels = [
+                f"{p['avatar']}  {p['prenom']}  ·  {p['age']} ans  ·  {p['commune']}"
+                for p in active_personas
+            ]
+            selected_idx = st.radio(
+                "Choisir un persona", range(nb_p),
+                format_func=lambda i: persona_labels[i], label_visibility="collapsed"
+            )
+        else:
+            selected_idx = int(st.number_input(
+                f"Numéro de persona (1 – {nb_p:,})",
+                min_value=1, max_value=nb_p, value=1, step=1,
+                help=f"Entrez un numéro entre 1 et {nb_p:,} pour sélectionner un persona du corpus Colab."
+            )) - 1
+            _p_prev = active_personas[selected_idx]
+            st.info(
+                f"**{_p_prev.get('avatar','👤')} {_p_prev.get('prenom','?')}** "
+                f"· {_p_prev.get('age','?')} ans "
+                f"· {_p_prev.get('commune','?')} "
+                f"· profil : *{_p_prev.get('type_persona', _p_prev.get('type','?'))}*"
+            )
+
         persona = active_personas[selected_idx]
         st.session_state["_p"] = persona
 
