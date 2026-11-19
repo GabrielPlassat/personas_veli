@@ -982,6 +982,24 @@ Simulateur personas                    distributions_nemotron.json
 # ══════════════════════════════════════════════════════════════════════════════
 with tab1:
     st.markdown("## 🎯 Optimiseur des aides publiques")
+
+    # ── BANDEAU SOURCE DE DONNÉES ─────────────────────────────────────────────
+    _EMP_DEFAULT = 1_950_000
+    _is_nemotron = (uploaded_json is not None) and (N_CIBLE != _EMP_DEFAULT)
+    if _is_nemotron:
+        _ratio = round(N_CIBLE / _EMP_DEFAULT * 100, 1)
+        st.success(
+            f"**🧬 Source : Nemotron 6M** — {N_CIBLE:,} personas cibles réels  "
+            f"(soit {_ratio} % de l'estimation EMP 2019 par défaut : {_EMP_DEFAULT:,})",
+            icon="✅"
+        )
+    else:
+        st.info(
+            f"**📊 Source : EMP 2019** — {_EMP_DEFAULT:,} personas estimés  "
+            "— Uploadez `distributions_nemotron.json` dans la sidebar pour recalibrer sur les personas réels Nemotron.",
+            icon="ℹ️"
+        )
+
     st.markdown(
     "Quel véhicule électrique faut-il concevoir pour couvrir le maximum de ménages modestes "
     "en zones rurales et périurbaines, à coût minimal ? "
@@ -1035,6 +1053,27 @@ Le curseur réduit le prix net de tous les véhicules. En baissant le prix :
             r_vt, dets_vt = reach_t3(opt_vt["auto"], vt["vit"], opt_vt["pl"], opt_vt["pn"])
             results_t3.append({**vt, "opt":opt_vt, "r":r_vt, "r0":r0_vt, "dets":dets_vt,
                                "gain":r_vt-r0_vt, "pct":r_vt/N_CIBLE*100})
+
+    # ── MÉTRIQUES CLÉS ────────────────────────────────────────────────────────
+    _best_res = max(results_t3, key=lambda r: r["r"])
+    _m1, _m2, _m3 = st.columns(3)
+    _m1.metric(
+        "👥 Population cible totale",
+        f"{N_CIBLE:,}",
+        delta=f"{N_CIBLE - 1_950_000:+,} vs EMP" if _is_nemotron else None,
+        delta_color="off"
+    )
+    _m2.metric(
+        "🏆 Meilleur véhicule",
+        _best_res["label"],
+        delta=f"{_best_res['r']:,} personas atteints"
+    )
+    _m3.metric(
+        "📈 Couverture max",
+        f"{_best_res['pct']:.1f} % cibles",
+        delta=f"avec {aide} % d'aides" if aide > 0 else "sans aide"
+    )
+    st.divider()
 
     # ── VUE SYNTHÉTIQUE : les 5 véhicules en une ligne ────────────────────────
     st.markdown("### 🚗 Les 5 types de véhicules — comparaison à la loupe")
