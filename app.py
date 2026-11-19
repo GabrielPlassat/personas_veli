@@ -236,6 +236,70 @@ VEHICLES = [
     {"id":"drakkar-flat-s", "nom":"DRAKKAR FLAT S",     "fab":"BLUEMOOOV",              "cat":["VAE"],           "vitesse":25,  "prix":14999,  "loc":None, "usages":["pour opérateur de maintenance et entretien","pour artisans","véhicules municipaux","pour secteur agricole"]},
 ]
 
+# ══════════════════════════════════════════════════════════════════════════════
+# CATALOGUE VAE COMPLET — 57 véhicules catégorie VAE (25 km/h, Actif/pédalage)
+# Source : fichier V_lis_Vendus partagé par XD — données HT au tarif catalogue
+# ══════════════════════════════════════════════════════════════════════════════
+VAE_CATALOG = [
+    {"nom":"moskitOS",                                    "fab":"moskitOS",                 "prix":1200,  "autonomie":100,"places":0,"usages":["Faire ses courses","pour artisans","pour commerçants et stands mobiles","Tourisme Découverte d'un territoire"]},
+    {"nom":"cargo verso",                                 "fab":"Douze-Cycles",             "prix":2202,  "autonomie":60, "places":2,"usages":["Faire ses courses","distribuer courrier et colis","trajets domicile travail","pour artisans","pour commerçants et stands mobiles","Tourisme Découverte d'un territoire"]},
+    {"nom":"Jean II",                                     "fab":"Jean Fourche",             "prix":2241,  "autonomie":60, "places":2,"usages":["Faire ses courses","trajets domicile travail","pour artisans","véhicules municipaux","distribuer courrier et colis"]},
+    {"nom":"Pelican Train",                               "fab":"Pelican",                  "prix":2990,  "autonomie":50, "places":1,"usages":["distribuer courrier et colis","pour artisans","pour commerçants et stands mobiles","véhicules municipaux","Faire ses courses"]},
+    {"nom":"La Fourmi",                                   "fab":"AirNAM",                   "prix":3625,  "autonomie":50, "places":3,"usages":["Faire ses courses","Tourisme Découverte d'un territoire","pour artisans","pour commerçants et stands mobiles","trajets domicile travail"]},
+    {"nom":"XYZ CARGO TRIKE",                             "fab":"WED CARGO",                "prix":3625,  "autonomie":45, "places":0,"usages":["distribuer courrier et colis","Faire ses courses","pour artisans","pour commerçants et stands mobiles"]},
+    {"nom":"Le cargo électrique des Cycles du Midi",      "fab":"Cycles du Midi",           "prix":4200,  "autonomie":60, "places":3,"usages":["Faire ses courses","trajets domicile travail","pour artisans","pour commerçants et stands mobiles","Tourisme Découverte d'un territoire"]},
+    {"nom":"Urbaner PROMENER",                            "fab":"HPR SOLUTIONS",            "prix":5400,  "autonomie":50, "places":2,"usages":["Faire ses courses","trajets domicile travail","Tourisme Découverte d'un territoire","se rendre sur les sites d'activités sportives"]},
+    {"nom":"Le Spécialiste",                              "fab":"Galian",                   "prix":5415,  "autonomie":80, "places":1,"usages":["pour artisans","distribuer courrier et colis","pour opérateur de maintenance et entretien","véhicules municipaux"]},
+    {"nom":"X-Bikium Utility",                            "fab":"X-Bikium",                 "prix":5990,  "autonomie":30, "places":0,"usages":["distribuer courrier et colis","pour artisans","pour commerçants et stands mobiles","véhicules municipaux"]},
+    {"nom":"BigTetu V1",                                  "fab":"BigTetu Cargo Bikes",      "prix":6209,  "autonomie":80, "places":1,"usages":["distribuer courrier et colis","Faire ses courses","pour artisans","pour commerçants et stands mobiles"]},
+    {"nom":"BigTetu",                                     "fab":"BigTetu Cargo Bikes",      "prix":6209,  "autonomie":80, "places":1,"usages":["distribuer courrier et colis","Faire ses courses","pour artisans","pour commerçants et stands mobiles"]},
+    {"nom":"Le Formidable",                               "fab":"Galian",                   "prix":6250,  "autonomie":80, "places":4,"usages":["Faire ses courses","Transport scolaire et périscolaire avec plusieurs enfants","trajets domicile travail","se rendre sur les sites d'activités sportives"]},
+    {"nom":"KETCH NOBOX",                                 "fab":"BLUEMOOOV",                "prix":6499,  "autonomie":50, "places":0,"usages":["pour artisans","pour commerçants et stands mobiles","véhicules municipaux","distribuer courrier et colis"]},
+    {"nom":"CLIPPER NOBOX",                               "fab":"BLUEMOOOV",                "prix":6999,  "autonomie":50, "places":0,"usages":["distribuer courrier et colis","pour artisans","pour commerçants et stands mobiles","véhicules municipaux"]},
+    {"nom":"PONY4",                                       "fab":"PonyFour s.r.o.",          "prix":7300,  "autonomie":100,"places":2,"usages":["Faire ses courses","Tourisme Découverte d'un territoire","pour artisans","distribuer courrier et colis","trajets domicile travail"]},
+    {"nom":"PelicanTrain",                                "fab":"Pelican Cycles",           "prix":7490,  "autonomie":60, "places":1,"usages":["distribuer courrier et colis","pour artisans","pour commerçants et stands mobiles","véhicules municipaux"]},
+    {"nom":"VUF XXL MAX POLY",                            "fab":"VUF BIKES",                "prix":7500,  "autonomie":60, "places":0,"usages":["distribuer courrier et colis","pour artisans","pour commerçants et stands mobiles","pour secteur agricole"]},
+    {"nom":"VUF XXL TAXI",                                "fab":"VUF BIKES",                "prix":7500,  "autonomie":60, "places":2,"usages":["Tourisme Découverte d'un territoire","véhicules municipaux","se rendre sur les sites d'activités sportives","trajets domicile travail"]},
+    {"nom":"KETCH CLEEN",                                 "fab":"BLUEMOOOV",                "prix":7549,  "autonomie":50, "places":0,"usages":["pour opérateur de maintenance et entretien","véhicules municipaux"]},
+    {"nom":"Runner V2",                                   "fab":"FlexiModal",               "prix":8000,  "autonomie":30, "places":0,"usages":["pour opérateur de maintenance et entretien","pour commerçants et stands mobiles","pour artisans","véhicules municipaux"]},
+    {"nom":"Urbaner VIVALDI",                             "fab":"HPR SOLUTIONS",            "prix":8600,  "autonomie":50, "places":2,"usages":["Faire ses courses","trajets domicile travail","distribuer courrier et colis","Tourisme Découverte d'un territoire"]},
+    {"nom":"MODULEO",                                     "fab":"DEBERGHES MOBILITECH",     "prix":8800,  "autonomie":90, "places":1,"usages":["Tourisme Découverte d'un territoire","pour artisans","pour secteur agricole","se rendre sur les sites d'activités sportives"]},
+    {"nom":"DRAKKAR NoBox L",                             "fab":"BLUEMOOOV",                "prix":8990,  "autonomie":50, "places":0,"usages":["pour opérateur de maintenance et entretien","distribuer courrier et colis"]},
+    {"nom":"Maillon Cargo",                               "fab":"Maillon Mobility",         "prix":9000,  "autonomie":80, "places":0,"usages":["distribuer courrier et colis","pour artisans","pour commerçants et stands mobiles","pour secteur agricole"]},
+    {"nom":"Maillon Daily",                               "fab":"Maillon Mobility",         "prix":9000,  "autonomie":80, "places":2,"usages":["Faire ses courses","trajets domicile travail","Tourisme Découverte d'un territoire","véhicules municipaux"]},
+    {"nom":"Supercycle",                                  "fab":"Supercycle",               "prix":9084,  "autonomie":150,"places":1,"usages":["Faire ses courses","trajets domicile travail","Tourisme Découverte d'un territoire","se rendre sur les sites d'activités sportives"]},
+    {"nom":"KETCH DELIVERY",                              "fab":"BLUEMOOOV",                "prix":9199,  "autonomie":50, "places":0,"usages":["distribuer courrier et colis","Faire ses courses","pour artisans","véhicules municipaux"]},
+    {"nom":"e-roe 25 Passenger",                          "fab":"E-ROE",                    "prix":9400,  "autonomie":120,"places":1,"usages":["Faire ses courses","trajets domicile travail","Tourisme Découverte d'un territoire","Transport scolaire et périscolaire avec plusieurs enfants"]},
+    {"nom":"e-roe 25 Cargo",                              "fab":"E-ROE",                    "prix":9400,  "autonomie":120,"places":0,"usages":["distribuer courrier et colis","Faire ses courses","pour artisans","pour commerçants et stands mobiles"]},
+    {"nom":"BigT",                                        "fab":"Illicycle et Toutenvélo",  "prix":9500,  "autonomie":60, "places":0,"usages":["distribuer courrier et colis","Faire ses courses","pour artisans","pour commerçants et stands mobiles"]},
+    {"nom":"ACT3.1 VAE",                                  "fab":"Acticycle",                "prix":9917,  "autonomie":70, "places":1,"usages":["distribuer courrier et colis","Faire ses courses","Tourisme Découverte d'un territoire","pour artisans"]},
+    {"nom":"VeMoo",                                       "fab":"VeMoo SAS",                "prix":10000, "autonomie":80, "places":0,"usages":["Faire ses courses","trajets domicile travail","Tourisme Découverte d'un territoire","pour artisans"]},
+    {"nom":"KOZI",                                        "fab":"Karbikes",                 "prix":10625, "autonomie":50, "places":2,"usages":["Faire ses courses","trajets domicile travail","Tourisme Découverte d'un territoire","Transport scolaire et périscolaire avec plusieurs enfants"]},
+    {"nom":"KUBI",                                        "fab":"Karbikes",                 "prix":10800, "autonomie":50, "places":0,"usages":["distribuer courrier et colis","Faire ses courses","pour artisans","véhicules municipaux"]},
+    {"nom":"KETCH STAND",                                 "fab":"BLUEMOOOV",                "prix":10888, "autonomie":50, "places":0,"usages":["pour commerçants et stands mobiles","véhicules municipaux"]},
+    {"nom":"CamiGO",                                      "fab":"CAMINADE",                 "prix":11000, "autonomie":70, "places":0,"usages":["distribuer courrier et colis","Faire ses courses","pour artisans","véhicules municipaux"]},
+    {"nom":"KARI",                                        "fab":"Karbikes",                 "prix":11050, "autonomie":50, "places":0,"usages":["pour artisans","pour commerçants et stands mobiles","véhicules municipaux"]},
+    {"nom":"TricyLift",                                   "fab":"FlexiModal",               "prix":11500, "autonomie":50, "places":1,"usages":["distribuer courrier et colis","pour artisans","pour commerçants et stands mobiles","pour secteur agricole","véhicules municipaux"]},
+    {"nom":"Urbaner BOXOO",                               "fab":"HPR SOLUTIONS",            "prix":11500, "autonomie":40, "places":0,"usages":["distribuer courrier et colis","pour artisans","véhicules municipaux"]},
+    {"nom":"Baker-Prax",                                  "fab":"PRAX",                     "prix":11600, "autonomie":80, "places":1,"usages":["distribuer courrier et colis","Faire ses courses","pour artisans","pour commerçants et stands mobiles","pour secteur agricole"]},
+    {"nom":"BOB",                                         "fab":"Sanka Cycle",              "prix":12000, "autonomie":70, "places":1,"usages":["trajets domicile travail","Faire ses courses","se rendre sur les sites d'activités sportives","véhicules municipaux"]},
+    {"nom":"KOLI",                                        "fab":"Karbikes",                 "prix":12150, "autonomie":50, "places":0,"usages":["distribuer courrier et colis","pour artisans","pour commerçants et stands mobiles"]},
+    {"nom":"DRAKKAR NoBox S",                             "fab":"BLUEMOOOV",                "prix":12999, "autonomie":50, "places":0,"usages":["pour opérateur de maintenance et entretien","véhicules municipaux"]},
+    {"nom":"GOLO",                                        "fab":"FLEVOBIKE",                "prix":13000, "autonomie":50, "places":8,"usages":["distribuer courrier et colis","Transport scolaire et périscolaire avec plusieurs enfants","pour artisans","véhicules municipaux"]},
+    {"nom":"CLIPPER FOOD",                                "fab":"BLUEMOOOV",                "prix":13999, "autonomie":50, "places":0,"usages":["pour commerçants et stands mobiles"]},
+    {"nom":"CITY-Q 850",                                  "fab":"CITY-Q",                   "prix":14000, "autonomie":100,"places":0,"usages":["distribuer courrier et colis","Tourisme Découverte d'un territoire","pour artisans","pour commerçants et stands mobiles"]},
+    {"nom":"ProXity",                                     "fab":"ProXity",                  "prix":14900, "autonomie":50, "places":0,"usages":["pour artisans","pour commerçants et stands mobiles","véhicules municipaux","surveillance incendie"]},
+    {"nom":"DRAKKAR FLAT S",                              "fab":"BLUEMOOOV",                "prix":14999, "autonomie":50, "places":0,"usages":["pour artisans","pour secteur agricole","véhicules municipaux"]},
+    {"nom":"DRAKKAR FLAT L",                              "fab":"BLUEMOOOV",                "prix":16599, "autonomie":50, "places":0,"usages":["pour artisans","véhicules municipaux"]},
+    {"nom":"DRAKKAR GREEN S",                             "fab":"BLUEMOOOV",                "prix":16999, "autonomie":50, "places":0,"usages":["pour artisans","pour secteur agricole","véhicules municipaux"]},
+    {"nom":"Nocar",                                       "fab":"Helio2",                   "prix":17900, "autonomie":50, "places":3,"usages":["Faire ses courses","trajets domicile travail","Tourisme Découverte d'un territoire","véhicules municipaux"]},
+    {"nom":"DRAKKAR GREEN L",                             "fab":"BLUEMOOOV",                "prix":18999, "autonomie":50, "places":0,"usages":["pour artisans","pour secteur agricole","véhicules municipaux"]},
+    {"nom":"DRAKKAR CARGO S",                             "fab":"BLUEMOOOV",                "prix":18999, "autonomie":50, "places":0,"usages":["distribuer courrier et colis","véhicules municipaux","pour opérateur de maintenance et entretien"]},
+    {"nom":"Woodybus",                                    "fab":"Humbird",                  "prix":19990, "autonomie":20, "places":8,"usages":["Transport scolaire et périscolaire avec plusieurs enfants","véhicules municipaux","trajets domicile travail","Tourisme Découverte d'un territoire"]},
+    {"nom":"DRAKKAR CARGO L",                             "fab":"BLUEMOOOV",                "prix":20999, "autonomie":50, "places":0,"usages":["distribuer courrier et colis","Faire ses courses","pour artisans","pour commerçants et stands mobiles","véhicules municipaux"]},
+    {"nom":"Ouicycle",                                    "fab":"France Quadricycle",       "prix":36000, "autonomie":40, "places":3,"usages":["Tourisme Découverte d'un territoire","Transport scolaire et périscolaire avec plusieurs enfants","véhicules municipaux"]},
+]
+
 # ── Actif/Passif : valeur réelle issue du champ Airtable "Véhicule Actif ou Passif" ──
 # Actif  = pédalage obligatoire (VAE, certains L6e…)
 # Passif = pas de pédalage (quadricycle, 2-roues motorisé…)
@@ -730,11 +794,12 @@ Le même notebook génère aussi `personas_mobilite_200k.csv` utilisable dans l'
 
 
 # ─── ONGLETS ────────────────────────────────────────────────────────────────
-tab_home, tab1, tab2, tab3 = st.tabs([
+tab_home, tab1, tab2, tab3, tab4 = st.tabs([
     "🏠 Accueil",
     "🎯 Optimiseur des aides",
     "📊 Analyse par territoire",
     "🔍 Simulateur personas",
+    "💶 Optimiseur €-public VAE",
 ])
 
 
@@ -1962,3 +2027,261 @@ Un seul réglage partagé — modifiez-le pour voir l'impact des aides sur le sc
                                             st.error(f"Erreur API : {e}")
 
         # ══════════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ONGLET 4 — Optimiseur d'aide à l'achat VAE (€ public investi)
+# ══════════════════════════════════════════════════════════════════════════════
+with tab4:
+    st.markdown("## 💶 Optimiseur de l'aide à l'achat — catégorie VAE")
+    st.markdown(
+        "Pour chaque niveau d'aide entre **300 € et 1 000 €**, combien de personas "
+        "accèdent à au moins un VAE du catalogue XD après déduction ? "
+        "La courbe montre l'efficacité marginale — **l'euro public qui convertit le plus de nouveaux acheteurs**."
+    )
+
+    # ── Paramètres utilisateur ──────────────────────────────────────────────
+    pa_col1, pa_col2, pa_col3 = st.columns([1, 1, 2])
+    with pa_col1:
+        aide_min = int(st.number_input("Aide mini (€)", min_value=0, max_value=500, value=300, step=50))
+    with pa_col2:
+        aide_max = int(st.number_input("Aide maxi (€)", min_value=500, max_value=2000, value=1000, step=50))
+    with pa_col3:
+        mode_sim = st.radio(
+            "Population cible",
+            ["Modèle statistique (périurbain cycliste, ~156 k personas)",
+             "Personas CSV chargés (si disponibles)"],
+            index=0,
+            help="Le modèle statistique utilise les distributions EMP 2019 / CGDD 2022 calibrées sur ~1,95M personas."
+        )
+
+    aides = list(range(aide_min, aide_max + 50, 50))
+
+    use_csv_mode = (
+        "CSV" in mode_sim
+        and st.session_state.personas_source == "csv"
+        and st.session_state.personas_csv
+    )
+
+    # ── Calcul selon le mode ────────────────────────────────────────────────
+    with st.spinner("Calcul de l'optimisation en cours…"):
+        import numpy as _np
+        import pandas as _pd_opt
+
+        results = []
+
+        if use_csv_mode:
+            # ── Mode CSV : calcul vectorisé sur les personas chargés ─────────
+            personas_data = st.session_state.personas_csv
+            n_tot = len(personas_data)
+
+            budgets_arr = _np.array([float(p.get("budget", 8000)) for p in personas_data])
+            prix_arr    = _np.array([v["prix"] for v in VAE_CATALOG])
+
+            # Usages des VAE
+            vae_usages = [set(v["usages"]) for v in VAE_CATALOG]
+
+            # Usages de chaque persona
+            def _get_needs(p):
+                b = p.get("besoins", p.get("usages", []))
+                if isinstance(b, list):  return set(b)
+                if isinstance(b, str):   return set(x.strip() for x in b.replace("|", ",").split(",") if x.strip())
+                return set()
+
+            need_sets = [_get_needs(p) for p in personas_data]
+
+            # Matrice usage : persona i × vae j → bool
+            usage_match = _np.zeros((n_tot, len(VAE_CATALOG)), dtype=bool)
+            for j, us in enumerate(vae_usages):
+                for i, ns in enumerate(need_sets):
+                    usage_match[i, j] = bool(ns & us) or (len(ns) == 0)
+
+            for A in aides:
+                prix_net = _np.maximum(0, prix_arr - A)   # (n_vae,)
+                budget_ok = prix_net[_np.newaxis, :] <= budgets_arr[:, _np.newaxis]
+                accessible = (budget_ok & usage_match).any(axis=1)
+                n_acc = int(accessible.sum())
+                results.append({"aide": A, "n": n_acc, "pct": n_acc / n_tot * 100})
+
+            pop_label = f"**{n_tot:,} personas CSV**"
+            pop_desc  = "corpus Nemotron chargé via Google Colab"
+
+        else:
+            # ── Mode statistique : affordability périurbain cycliste + VAE ──
+            # Marché cible VAE : profil périurbain_cycliste (8 % des 1,95M → ~156 000)
+            N_VAE_CIBLE = round(0.08 * N_CIBLE)   # ≈ 156 000
+
+            # Pour chaque aide, trouver N personas ayant budget ≥ min(prix VAE - aide)
+            # On utilise AFFORD_CYCLISTE : P(peut financer prix_net)
+            # Et on prend le VAE le plus accessible (prix le plus bas du catalogue)
+            prix_arr_stat = _np.array([v["prix"] for v in VAE_CATALOG])
+
+            for A in aides:
+                prix_nets = _np.maximum(0, prix_arr_stat - A)
+                prix_min  = int(prix_nets.min())   # VAE le moins cher après aide
+
+                # P(persona peut financer au moins le VAE le moins cher)
+                p_afford = interp(AFFORD_CYCLISTE, prix_min)
+                n_acc = round(N_VAE_CIBLE * p_afford)
+                results.append({"aide": A, "n": n_acc, "pct": n_acc / N_VAE_CIBLE * 100})
+
+            pop_label = f"~**{N_VAE_CIBLE:,}** personas (modèle stat.)"
+            pop_desc  = "périurbain cycliste — 8 % des 1,95 M personas cible XD"
+
+        # ── Efficacité marginale ─────────────────────────────────────────────
+        for i in range(1, len(results)):
+            dn    = results[i]["n"] - results[i - 1]["n"]
+            # Coût marginal = (Aide[i] × N[i]) − (Aide[i−1] × N[i−1])
+            cout_i   = results[i]["aide"]     * results[i]["n"]
+            cout_im1 = results[i - 1]["aide"] * results[i - 1]["n"]
+            dcout    = cout_i - cout_im1
+            results[i]["delta_n"]        = dn
+            results[i]["cout_marginal"]  = round(dcout / dn) if dn > 0 else None
+            results[i]["eff_marginal"]   = dn / 50 * 1000    # nouveaux personas / 1 000 € d'aide supplémentaire
+
+        results[0]["delta_n"]       = 0
+        results[0]["cout_marginal"] = None
+        results[0]["eff_marginal"]  = 0
+
+        # Optimal = meilleure efficacité marginale
+        valid_idx = [i for i in range(1, len(results)) if results[i]["delta_n"] > 0]
+        best_idx  = max(valid_idx, key=lambda i: results[i]["eff_marginal"]) if valid_idx else 1
+        best_aide = results[best_idx]["aide"]
+
+    # ── Métriques clés ──────────────────────────────────────────────────────
+    r0   = results[0]
+    ropt = results[best_idx]
+    rmax = results[-1]
+
+    st.info(f"🧑‍🤝‍🧑 Population simulée : {pop_label} · {pop_desc}")
+
+    mc1, mc2, mc3, mc4 = st.columns(4)
+    mc1.metric(
+        f"Accessibles à {r0['aide']} €",
+        f"{r0['n']:,}",
+        f"{r0['pct']:.1f} % du corpus"
+    )
+    mc2.metric(
+        f"🎯 Optimum à **{best_aide} €**",
+        f"{ropt['n']:,}",
+        f"+{ropt['delta_n']:,} vs {aides[best_idx-1]} € · {ropt['pct']:.1f} %"
+    )
+    mc3.metric(
+        f"Accessibles à {rmax['aide']} €",
+        f"{rmax['n']:,}",
+        f"{rmax['pct']:.1f} % du corpus"
+    )
+    if ropt["cout_marginal"]:
+        mc4.metric(
+            "💶 Coût marginal à l'optimum",
+            f"{ropt['cout_marginal']:,} €",
+            "par nouveau persona converti"
+        )
+    else:
+        mc4.metric("💶 Coût marginal", "—", "aucun gain marginal détecté")
+
+    st.divider()
+
+    # ── Courbes ─────────────────────────────────────────────────────────────
+    df_res = _pd_opt.DataFrame(results)
+
+    cg1, cg2 = st.columns(2)
+
+    with cg1:
+        st.markdown("#### 📈 Personas accessibles selon l'aide")
+        df_c1 = df_res[["aide", "n"]].set_index("aide")
+        df_c1.columns = ["Personas accessibles"]
+        st.line_chart(df_c1)
+        st.caption(
+            f"🎯 L'optimum est à **{best_aide} €** : "
+            f"+{ropt['delta_n']:,} nouveaux personas sur le palier 50 € précédent."
+        )
+
+    with cg2:
+        st.markdown("#### 📊 Nouveaux personas par palier de +50 € d'aide")
+        df_c2 = df_res[df_res["delta_n"].notna()][["aide", "delta_n"]].set_index("aide")
+        df_c2.columns = ["Nouveaux personas / 50 €"]
+        df_c2 = df_c2.astype(float)
+        st.bar_chart(df_c2)
+        st.caption(
+            "Plus la barre est haute, plus l'euro public supplémentaire "
+            "ouvre l'accès à de nouveaux acheteurs à ce niveau d'aide."
+        )
+
+    st.divider()
+
+    # ── Tableau de synthèse ──────────────────────────────────────────────────
+    st.markdown("#### 📋 Tableau de synthèse")
+
+    df_tbl = df_res[["aide", "n", "pct", "delta_n", "cout_marginal"]].copy()
+    df_tbl.columns = ["Aide (€)", "Personas accessibles", "% corpus", "Nouveaux / +50 €", "Coût marginal (€/personne)"]
+    df_tbl["Aide (€)"]              = df_tbl["Aide (€)"].astype(int)
+    df_tbl["Personas accessibles"]  = df_tbl["Personas accessibles"].astype(int)
+    df_tbl["Nouveaux / +50 €"]      = df_tbl["Nouveaux / +50 €"].fillna(0).astype(int)
+    df_tbl["% corpus"]              = df_tbl["% corpus"].round(1)
+    df_tbl["Coût marginal (€/personne)"] = df_tbl["Coût marginal (€/personne)"].fillna(0).astype(int)
+
+    def _highlight_opt(row):
+        if row["Aide (€)"] == best_aide:
+            return ["background-color: #d1fae5; font-weight: bold; color: #064e3b"] * len(row)
+        return [""] * len(row)
+
+    st.dataframe(
+        df_tbl.style.apply(_highlight_opt, axis=1),
+        use_container_width=True,
+        hide_index=True
+    )
+
+    st.divider()
+
+    # ── Véhicules débloqués à l'aide optimale ───────────────────────────────
+    st.markdown(f"#### 🚲 Catalogue VAE à l'aide optimale de **{best_aide} €**")
+    st.caption(
+        f"Prix net = prix HT − {best_aide} €. "
+        "Tri du moins cher au plus cher après déduction. "
+        "% budget OK : part des personas dont le budget ≥ prix net (modèle statistique)."
+    )
+
+    if use_csv_mode:
+        budgets_disp = budgets_arr
+    else:
+        # Approximation statistique : on reconstitue une distribution budget
+        # à partir de AFFORD_CYCLISTE (percentiles implicites)
+        budget_pts = sorted(AFFORD_CYCLISTE.keys())
+        budgets_disp = None   # on affiche la proba afford directement
+
+    rows_vae = []
+    for v in sorted(VAE_CATALOG, key=lambda x: x["prix"]):
+        pn = max(0, v["prix"] - best_aide)
+        if use_csv_mode and budgets_disp is not None:
+            n_bud = int((budgets_disp >= pn).sum())
+            pct_bud = round(n_bud / len(budgets_disp) * 100, 1)
+            bud_col = f"{pct_bud} %"
+        else:
+            pct_bud = round(interp(AFFORD_CYCLISTE, pn) * 100, 1)
+            bud_col = f"~{pct_bud} %"
+        rows_vae.append({
+            "Nom véhicule":        v["nom"],
+            "Fabricant":           v["fab"],
+            "Prix HT (€)":         v["prix"],
+            f"Prix net −{best_aide} € (€)": pn,
+            "Autonomie":           f"{v['autonomie']} km",
+            "Places":              v["places"],
+            "% personas budget OK": bud_col,
+        })
+
+    df_vae = _pd_opt.DataFrame(rows_vae)
+    st.dataframe(df_vae, use_container_width=True, hide_index=True)
+
+    st.markdown(
+        f"""
+        <div style='background:#eff6ff;border-left:4px solid #2563eb;padding:14px 18px;border-radius:6px;margin-top:12px'>
+        <b>💡 Lecture de l'optimum</b><br>
+        L'aide optimale de <b>{best_aide} €</b> maximise le nombre de <em>nouveaux</em> personas convertis
+        par euro public supplémentaire.<br>
+        Au-delà, la courbe entre en régime de <em>rendements décroissants</em> :
+        chaque euro additionnel bénéficie surtout aux personas qui auraient acheté sans aide,
+        sans ouvrir de nouveaux marchés.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
