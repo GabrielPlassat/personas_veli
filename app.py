@@ -2112,7 +2112,8 @@ with tab4:
         import numpy as _np
         import pandas as _pd_opt
 
-        results = []
+        results          = []
+        results_by_price = None   # multi-séries pour le mode statistique (≤ 15 000 €)
 
         if use_csv_mode:
             # ── Mode CSV : calcul vectorisé sur les personas chargés ─────────
@@ -2154,31 +2155,47 @@ with tab4:
             # ── Mode statistique : affordability périurbain cycliste + VAE ──
             # Marché cible VAE : profil périurbain_cycliste (8 % de N_CIBLE)
             N_VAE_CIBLE = round(0.08 * N_CIBLE)
-            _pct_cycliste = 0.08
 
             # Distribution d'accessibilité : Nemotron si disponible, sinon CGDD/EMP 2019
             _afford_pca = AFFORD_PROFILES.get("periurbain_cycliste", AFFORD_CYCLISTE)
             _afford_src = "Nemotron" if "periurbain_cycliste" in AFFORD_PROFILES else "EMP 2019 / CGDD"
 
-            # Prix de référence : MÉDIANE du catalogue (≈ 9 900 €)
-            # Le VAE le moins cher (1 200 €) est déjà accessible pour 96 % des personas
-            # à n'importe quelle aide ≥ 300 € → pas de variation. La médiane capture
-            # la décision d'achat réelle (compromis qualité / budget).
-            prix_arr_stat = _np.array([v["prix"] for v in VAE_CATALOG])
-            prix_median_cat = int(_np.median(prix_arr_stat))
+            # Catalogue filtré : on exclut les vélis > 15 000 € (spécifiques / flottes)
+            _vae_std  = [v for v in VAE_CATALOG if v["prix"] <= 15_000]
+            _prix_std = _np.array([v["prix"] for v in _vae_std])
 
-            for A in aides:
-                prix_ref  = max(0, prix_median_cat - A)  # prix médian après aide
-                p_afford  = interp(_afford_pca, prix_ref)
-                n_acc     = round(N_VAE_CIBLE * p_afford)
-                results.append({"aide": A, "n": n_acc, "pct": n_acc / N_VAE_CIBLE * 100})
+            # 6 prix représentatifs couvrant la fourchette 0 – 15 000 €
+            _prix_uniq = sorted(set(int(p) for p in _prix_std))
+            if len(_prix_uniq) > 6:
+                _idx_sel    = [int(i) for i in _np.linspace(0, len(_prix_uniq) - 1, 6)]
+                _prix_brackets = [_prix_uniq[i] for i in _idx_sel]
+            else:
+                _prix_brackets = _prix_uniq
+
+            # Multi-séries : pour chaque tranche, accessibilité vs niveau d'aide
+            results_by_price = {}
+            for _prix_base in _prix_brackets:
+                _serie = []
+                for A in aides:
+                    _prix_ref = max(0, _prix_base - A)
+                    _p_aff    = interp(_afford_pca, _prix_ref)
+                    _n_acc    = round(N_VAE_CIBLE * _p_aff)
+                    _serie.append({"aide": A, "n": _n_acc,
+                                   "pct": _n_acc / N_VAE_CIBLE * 100})
+                results_by_price[_prix_base] = _serie
+
+            # "results" = série sur le prix médian filtré (pour les métriques du dessus)
+            _prix_med_std = int(_np.median(_prix_std))
+            _prix_ref_key = min(_prix_brackets, key=lambda p: abs(p - _prix_med_std))
+            results = results_by_price[_prix_ref_key]
 
             _ncible_lbl = f"{N_CIBLE:,}" if N_CIBLE != 1_950_000 else "1,95 M"
             pop_label = f"~**{N_VAE_CIBLE:,}** personas (modèle stat.)"
             pop_desc  = (
                 f"périurbain cycliste · 8 % des {_ncible_lbl} personas cible XD "
                 f"· distribution budget : {_afford_src} "
-                f"· VAE de référence : médiane catalogue {prix_median_cat:,} €"
+                f"· catalogue filtré : {len(_vae_std)} VAE ≤ 15 000 € "
+                f"· {len(_prix_brackets)} tranches de prix analysées"
             )
 
         # ── Efficacité marginale ─────────────────────────────────────────────
@@ -2238,28 +2255,62 @@ with tab4:
     # ── Courbes ─────────────────────────────────────────────────────────────
     df_res = _pd_opt.DataFrame(results)
 
-    cg1, cg2 = st.columns(2)
-
-    with cg1:
-        st.markdown("#### 📈 Personas accessibles selon l'aide")
-        df_c1 = df_res[["aide", "n"]].set_index("aide")
-        df_c1.columns = ["Personas accessibles"]
-        st.line_chart(df_c1)
+    if results_by_price is not None:
+        # ── Mode statistique : graphique multi-tranches de prix ──────────────
+        st.markdown("#### 📈 Personas accessibles par tranche de prix (VAE ≤ 15 000 €)")
+        _chart_dict = {
+            f"{p:,} €": [r["n"] for r in _serie]
+            for p, _serie in sorted(results_by_price.items())
+        }
+        _chart_idx = [r["aide"] for r in results]
+        df_multi = _pd_opt.DataFrame(_chart_dict, index=_chart_idx)
+        df_multi.index.name = "Aide (€)"
+        st.line_chart(df_multi)
         st.caption(
-            f"🎯 L'optimum est à **{best_aide} €** : "
-            f"+{ropt['delta_n']:,} nouveaux personas sur le palier 50 € précédent."
+            f"Chaque courbe = une tranche de prix représentative du catalogue filtré (≤ 15 000 €). "
+            f"La courbe de référence (≈ {_prix_ref_key:,} €, médiane) alimente les métriques ci-dessus. "
+            f"🎯 Optimum médian à **{best_aide} €** d'aide."
         )
 
-    with cg2:
-        st.markdown("#### 📊 Nouveaux personas par palier de +50 € d'aide")
-        df_c2 = df_res[df_res["delta_n"].notna()][["aide", "delta_n"]].set_index("aide")
-        df_c2.columns = ["Nouveaux personas / 50 €"]
-        df_c2 = df_c2.astype(float)
-        st.bar_chart(df_c2)
-        st.caption(
-            "Plus la barre est haute, plus l'euro public supplémentaire "
-            "ouvre l'accès à de nouveaux acheteurs à ce niveau d'aide."
-        )
+        # Tableau synthèse par tranche de prix
+        st.markdown("#### 🏆 Optimum d'aide par tranche de prix")
+        _rows_br = []
+        for _px, _ser in sorted(results_by_price.items()):
+            _v_idx = [i for i in range(1, len(_ser)) if _ser[i]["n"] > _ser[i - 1]["n"]]
+            _bst   = max(_v_idx, key=lambda i: _ser[i]["n"] - _ser[i - 1]["n"]) if _v_idx else 0
+            _rows_br.append({
+                "Prix VAE (€)":        f"{_px:,}",
+                "Sans aide":           f"{_ser[0]['n']:,}  ({_ser[0]['pct']:.1f} %)",
+                "Aide optimale (€)":   _ser[_bst]["aide"] if _v_idx else "—",
+                "Avec aide optimale":  f"{_ser[_bst]['n']:,}  ({_ser[_bst]['pct']:.1f} %)",
+                "Accessibilité max":   f"{_ser[-1]['pct']:.1f} %  (à {_ser[-1]['aide']} €)",
+            })
+        st.dataframe(_pd_opt.DataFrame(_rows_br), use_container_width=True, hide_index=True)
+
+    else:
+        # ── Mode CSV : graphique simple + gain marginal ───────────────────────
+        cg1, cg2 = st.columns(2)
+
+        with cg1:
+            st.markdown("#### 📈 Personas accessibles selon l'aide")
+            df_c1 = df_res[["aide", "n"]].set_index("aide")
+            df_c1.columns = ["Personas accessibles"]
+            st.line_chart(df_c1)
+            st.caption(
+                f"🎯 L'optimum est à **{best_aide} €** : "
+                f"+{ropt['delta_n']:,} nouveaux personas sur le palier 50 € précédent."
+            )
+
+        with cg2:
+            st.markdown("#### 📊 Nouveaux personas par palier de +50 € d'aide")
+            df_c2 = df_res[df_res["delta_n"].notna()][["aide", "delta_n"]].set_index("aide")
+            df_c2.columns = ["Nouveaux personas / 50 €"]
+            df_c2 = df_c2.astype(float)
+            st.bar_chart(df_c2)
+            st.caption(
+                "Plus la barre est haute, plus l'euro public supplémentaire "
+                "ouvre l'accès à de nouveaux acheteurs à ce niveau d'aide."
+            )
 
     st.divider()
 
@@ -2288,7 +2339,12 @@ with tab4:
     st.divider()
 
     # ── Véhicules débloqués à l'aide optimale ───────────────────────────────
-    st.markdown(f"#### 🚲 Catalogue VAE à l'aide optimale de **{best_aide} €**")
+    _titre_cat = (
+        f"#### 🚲 Catalogue VAE ≤ 15 000 € — aide optimale **{best_aide} €**"
+        if not use_csv_mode
+        else f"#### 🚲 Catalogue VAE complet — aide optimale **{best_aide} €**"
+    )
+    st.markdown(_titre_cat)
     st.caption(
         f"Prix net = prix HT − {best_aide} €. "
         "Tri du moins cher au plus cher après déduction. "
@@ -2296,15 +2352,17 @@ with tab4:
     )
 
     if use_csv_mode:
-        budgets_disp = budgets_arr
+        budgets_disp    = budgets_arr
+        _catalog_to_show = VAE_CATALOG
     else:
         # Approximation statistique : on reconstitue une distribution budget
         # à partir de AFFORD_CYCLISTE (percentiles implicites)
-        budget_pts = sorted(AFFORD_CYCLISTE.keys())
-        budgets_disp = None   # on affiche la proba afford directement
+        budget_pts       = sorted(AFFORD_CYCLISTE.keys())
+        budgets_disp     = None   # on affiche la proba afford directement
+        _catalog_to_show = [v for v in VAE_CATALOG if v["prix"] <= 15_000]
 
     rows_vae = []
-    for v in sorted(VAE_CATALOG, key=lambda x: x["prix"]):
+    for v in sorted(_catalog_to_show, key=lambda x: x["prix"]):
         pn = max(0, v["prix"] - best_aide)
         if use_csv_mode and budgets_disp is not None:
             n_bud = int((budgets_disp >= pn).sum())
