@@ -1799,6 +1799,9 @@ Un seul réglage partagé — modifiez-le pour voir l'impact des aides sur le sc
                                 "skills":   str(_col(row_up, "skills", default="")),
                                     "hobbies":  str(_col(row_up, "hobbies", default="")),
                                 "besoins":  _besoins(row_up),
+                                # Colonnes Colab pour l'optimiseur (tab4)
+                                "auto_km":    float(_col(row_up, "besoin_autonomie_km", default=30)),
+                                "places_min": float(_col(row_up, "places_besoin", default=1)),
                             })
                         except Exception:
                             pass  # skip malformed rows
@@ -2124,6 +2127,17 @@ with tab4:
             "→ Le modèle statistique est utilisé en attendant.",
             icon="⚠️"
         )
+    # Explication du mode CSV si actif
+    if use_csv_mode:
+        st.info(
+            "📊 **Mode CSV — modèle probabiliste par territoire**\n\n"
+            "Le `budget_achat_eur` du corpus Colab représente la *capacité financière véhicule* "
+            "(médiane 8 500 €) et non la *disposition à payer* spécifique pour un véli. "
+            "Ce modèle utilise donc les distributions **AFFORD par type de territoire** "
+            "(issues d'EMP 2019 ou du JSON Nemotron si chargé) — les mêmes que le mode stat — "
+            "avec en plus les contraintes **autonomie**, **places** et **usages** de chaque persona.",
+            icon="ℹ️"
+        )
 
     # ── Calcul selon le mode ────────────────────────────────────────────────
     with st.spinner("Calcul de l'optimisation en cours…"):
@@ -2134,40 +2148,105 @@ with tab4:
         results_by_price = None   # multi-séries pour le mode statistique (≤ 15 000 €)
 
         if use_csv_mode:
-            # ── Mode CSV : calcul vectorisé sur les personas chargés ─────────
+            # ── Mode CSV : modèle AFFORD × cheapest-match ────────────────────
+            # Question : pour chaque persona, peut-il/elle se financer le véhicule
+            # intermédiaire complet le moins cher répondant à ses besoins ?
+            # On utilise les distributions AFFORD par territoire (EMP 2019 / Nemotron)
+            # qui capturent la *disposition à payer* réelle.
+            # Le budget_achat_eur (capacité financière générale) n'est PAS utilisé :
+            # il est toujours >> au prix des VAEs → résultat trivial à 100 %.
+            # Seuil 2 500 € : exclut les produits entrée de gamme / artisanat
+            # (ex. moskitOS 1 200 €) non conçus pour la mobilité quotidienne périurbaine.
+            _VAE_PRIX_MIN = 2_500   # € – seuil véhicule intermédiaire complet
+
             personas_data = st.session_state.personas_csv
             n_tot = len(personas_data)
+            n_vae = len(VAE_CATALOG)
 
-            budgets_arr = _np.array([float(p.get("budget", 8000)) for p in personas_data])
-            prix_arr    = _np.array([v["prix"] for v in VAE_CATALOG])
+            prix_arr = _np.array([v["prix"] for v in VAE_CATALOG], dtype=float)
 
-            # Usages des VAE
-            vae_usages = [set(v["usages"]) for v in VAE_CATALOG]
+            # ── Mappage territoire → profil AFFORD ──────────────────────────
+            _terr_map = {
+                "periurbain":  "periurbain_cycliste",
+                "rural":       "rural_navetteur",
+                "rural_isole": "rural_navetteur",
+                "montagne":    "rural_navetteur",
+                "urbain":      "periurbain_cycliste",
+                "ile":         "periurbain_cycliste",
+            }
+            _prof_list   = [_terr_map.get(str(p.get("urbanite","periurbain")), "periurbain_cycliste") for p in personas_data]
+            _uniq_profs  = sorted(set(_prof_list))
+            _prof2idx    = {pk: i for i, pk in enumerate(_uniq_profs)}
+            _profile_idx = _np.array([_prof2idx[pk] for pk in _prof_list], dtype=_np.int32)
+            n_profs      = len(_uniq_profs)
 
-            # Usages de chaque persona
-            def _get_needs(p):
-                b = p.get("besoins", p.get("usages", []))
-                if isinstance(b, list):  return set(b)
-                if isinstance(b, str):   return set(x.strip() for x in b.replace("|", ",").split(",") if x.strip())
-                return set()
+            # ── Contrainte autonomie ─────────────────────────────────────────
+            _auto_min = _np.array([float(p.get("auto_km", 30)) for p in personas_data])
+            _vae_auto = _np.array([float(v.get("autonomie", 50)) for v in VAE_CATALOG])
+            _auto_ok  = _vae_auto[_np.newaxis, :] >= _auto_min[:, _np.newaxis]   # (n_tot, n_vae)
 
-            need_sets = [_get_needs(p) for p in personas_data]
+            # ── Contrainte places (places==0 → non filtré) ───────────────────
+            _places_min = _np.array([float(p.get("places_min", 1)) for p in personas_data])
+            _vae_pl     = _np.array([float(v.get("places", 0)) for v in VAE_CATALOG])
+            _places_ok  = (_vae_pl[_np.newaxis,:] == 0) | (_vae_pl[_np.newaxis,:] >= _places_min[:,_np.newaxis])
 
-            # Matrice usage : persona i × vae j → bool
-            usage_match = _np.zeros((n_tot, len(VAE_CATALOG)), dtype=bool)
-            for j, us in enumerate(vae_usages):
-                for i, ns in enumerate(need_sets):
-                    usage_match[i, j] = bool(ns & us) or (len(ns) == 0)
+            # ── Contrainte usages (matrice binaire vectorisée) ───────────────
+            _vae_usages = [set(v["usages"]) for v in VAE_CATALOG]
+            _all_u = sorted({u for us in _vae_usages for u in us})
+            _u2i   = {u: idx for idx, u in enumerate(_all_u)}
+            _nvoc  = len(_all_u)
+            _vae_v = _np.zeros((n_vae, _nvoc), dtype=bool)
+            for _j, _us in enumerate(_vae_usages):
+                for _u in _us:
+                    if _u in _u2i: _vae_v[_j, _u2i[_u]] = True
+            _pers_v = _np.zeros((n_tot, _nvoc), dtype=bool)
+            _has_n  = _np.zeros(n_tot, dtype=bool)
+            for _i, _p in enumerate(personas_data):
+                _bn = _p.get("besoins", _p.get("usages", []))
+                if isinstance(_bn, str):
+                    _bn = [x.strip() for x in _bn.replace("|", ",").split(",") if x.strip()]
+                _ns = set(_bn) if isinstance(_bn, list) else set()
+                if _ns:
+                    _has_n[_i] = True
+                    for _u in _ns:
+                        if _u in _u2i: _pers_v[_i, _u2i[_u]] = True
+            _usage_ok = (_pers_v @ _vae_v.T).astype(bool) | (~_has_n[:, _np.newaxis])
 
+            # ── Seuil véhicule complet + combinaison contraintes ─────────────
+            _eligible = prix_arr >= _VAE_PRIX_MIN                  # bool (n_vae,)
+            _phys_ok  = _usage_ok & _auto_ok & _places_ok & _eligible[_np.newaxis, :]
+
+            # ── VAE le moins cher répondant à tous les critères par persona ──
+            _INF = 1e9
+            _masked_prices = _np.where(_phys_ok, prix_arr[_np.newaxis, :], _INF)
+            _cheapest      = _masked_prices.min(axis=1)   # (n_tot,) : inf si aucun VAE
+
+            _n_no_match = int((_cheapest >= _INF).sum())
+
+            # ── Boucle sur les niveaux d'aide ────────────────────────────────
+            # Pour chaque persona : P(afford(cheapest_vae - aide)) selon profil territoire
             for A in aides:
-                prix_net = _np.maximum(0, prix_arr - A)   # (n_vae,)
-                budget_ok = prix_net[_np.newaxis, :] <= budgets_arr[:, _np.newaxis]
-                accessible = (budget_ok & usage_match).any(axis=1)
-                n_acc = int(accessible.sum())
+                _pnet = _np.maximum(0.0, _cheapest - A)   # (n_tot,) prix net après aide
+
+                _p_arr = _np.zeros(n_tot, dtype=float)
+                for _ip, _pk in enumerate(_uniq_profs):
+                    _mask = _profile_idx == _ip
+                    if _mask.any():
+                        _ap  = AFFORD_PROFILES.get(_pk, AFFORD_CYCLISTE)
+                        _pts = sorted(_ap.keys())
+                        _prb = [_ap[k] for k in _pts]
+                        _p_arr[_mask] = _np.interp(_pnet[_mask], _pts, _prb)
+
+                _p_arr[_cheapest >= _INF] = 0.0   # personas sans VAE correspondant
+                n_acc = round(float(_np.sum(_p_arr)))
                 results.append({"aide": A, "n": n_acc, "pct": n_acc / n_tot * 100})
 
             pop_label = f"**{n_tot:,} personas CSV**"
-            pop_desc  = "corpus Nemotron chargé via Google Colab"
+            pop_desc  = (
+                f"corpus Nemotron · VAE ≥ {_VAE_PRIX_MIN:,} € · VAE le moins cher "
+                "adapté aux besoins (autonomie + places + usages) · distribution "
+                f"AFFORD par territoire ({', '.join(_uniq_profs)})"
+            )
 
         else:
             # ── Mode statistique : affordability périurbain cycliste + VAE ──
