@@ -724,7 +724,7 @@ Le même notebook génère aussi `personas_mobilite_200k.csv` utilisable dans l'
         try:
             import json as _json
             data = _json.load(uploaded_json)
-            required = {"periurbain_solo","periurbain_famille","rural_navetteur","rural_famille","rural_longue_dist"}
+            required = {"periurbain_solo","periurbain_famille","rural_navetteur","rural_famille","rural_longue_dist","periurbain_cycliste"}
             if "CUMUL_AUTO" in data and "AFFORD_PROFILES" in data:
                 loaded_profiles = []
                 skipped_profiles = []
@@ -744,10 +744,8 @@ Le même notebook génère aussi `personas_mobilite_200k.csv` utilisable dans l'
                     vals = {int(k):v for k,v in d.items() if v is not None}
                     if vals and max(vals.values()) > 0.05 and pid in loaded_profiles:
                         AFFORD_PROFILES[pid] = vals
-                # N_CIBLE : ne mettre à jour que si tous les profils sont présents
-                # Si des profils périurbains manquent, n_cible_nemotron = rural seulement
-                # → on conserve l'estimation globale (1,95M) pour ne pas fausser les totaux
-                if len(loaded_profiles) == 6:
+                # N_CIBLE : mettre à jour dès qu'au moins un profil est chargé
+                if len(loaded_profiles) >= 1:
                     N_CIBLE = data.get("n_cible_nemotron", N_CIBLE)
                 # Mettre à jour les pcts uniquement pour les profils chargés
                 # Les profils sans données conservent leurs pcts estimés
