@@ -2098,6 +2098,14 @@ with tab4:
         and st.session_state.personas_source == "csv"
         and st.session_state.personas_csv
     )
+    # Avertissement si CSV demandé mais pas chargé
+    if "CSV" in mode_sim and not use_csv_mode:
+        st.warning(
+            "⚠️ Aucun fichier CSV chargé. "
+            "Pour activer ce mode, uploadez `personas_mobilite_200k.csv` dans l'onglet **Simulateur personas** (onglet 3). "
+            "→ Le modèle statistique est utilisé en attendant.",
+            icon="⚠️"
+        )
 
     # ── Calcul selon le mode ────────────────────────────────────────────────
     with st.spinner("Calcul de l'optimisation en cours…"):
@@ -2144,25 +2152,34 @@ with tab4:
 
         else:
             # ── Mode statistique : affordability périurbain cycliste + VAE ──
-            # Marché cible VAE : profil périurbain_cycliste (8 % des 1,95M → ~156 000)
-            N_VAE_CIBLE = round(0.08 * N_CIBLE)   # ≈ 156 000
+            # Marché cible VAE : profil périurbain_cycliste (8 % de N_CIBLE)
+            N_VAE_CIBLE = round(0.08 * N_CIBLE)
+            _pct_cycliste = 0.08
 
-            # Pour chaque aide, trouver N personas ayant budget ≥ min(prix VAE - aide)
-            # On utilise AFFORD_CYCLISTE : P(peut financer prix_net)
-            # Et on prend le VAE le plus accessible (prix le plus bas du catalogue)
+            # Distribution d'accessibilité : Nemotron si disponible, sinon CGDD/EMP 2019
+            _afford_pca = AFFORD_PROFILES.get("periurbain_cycliste", AFFORD_CYCLISTE)
+            _afford_src = "Nemotron" if "periurbain_cycliste" in AFFORD_PROFILES else "EMP 2019 / CGDD"
+
+            # Prix de référence : MÉDIANE du catalogue (≈ 9 900 €)
+            # Le VAE le moins cher (1 200 €) est déjà accessible pour 96 % des personas
+            # à n'importe quelle aide ≥ 300 € → pas de variation. La médiane capture
+            # la décision d'achat réelle (compromis qualité / budget).
             prix_arr_stat = _np.array([v["prix"] for v in VAE_CATALOG])
+            prix_median_cat = int(_np.median(prix_arr_stat))
 
             for A in aides:
-                prix_nets = _np.maximum(0, prix_arr_stat - A)
-                prix_min  = int(prix_nets.min())   # VAE le moins cher après aide
-
-                # P(persona peut financer au moins le VAE le moins cher)
-                p_afford = interp(AFFORD_CYCLISTE, prix_min)
-                n_acc = round(N_VAE_CIBLE * p_afford)
+                prix_ref  = max(0, prix_median_cat - A)  # prix médian après aide
+                p_afford  = interp(_afford_pca, prix_ref)
+                n_acc     = round(N_VAE_CIBLE * p_afford)
                 results.append({"aide": A, "n": n_acc, "pct": n_acc / N_VAE_CIBLE * 100})
 
+            _ncible_lbl = f"{N_CIBLE:,}" if N_CIBLE != 1_950_000 else "1,95 M"
             pop_label = f"~**{N_VAE_CIBLE:,}** personas (modèle stat.)"
-            pop_desc  = "périurbain cycliste — 8 % des 1,95 M personas cible XD"
+            pop_desc  = (
+                f"périurbain cycliste · 8 % des {_ncible_lbl} personas cible XD "
+                f"· distribution budget : {_afford_src} "
+                f"· VAE de référence : médiane catalogue {prix_median_cat:,} €"
+            )
 
         # ── Efficacité marginale ─────────────────────────────────────────────
         for i in range(1, len(results)):
